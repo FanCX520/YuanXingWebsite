@@ -189,6 +189,190 @@ export function createSparkleEmblemGeometry({
 }
 
 /**
+ * 生成共享厚度场的八角星单体：
+ * 先求主星与 45° 短针星在二维平面上的并集轮廓，
+ * 再沿统一的厚度函数生成前后两面，避免两个实体中心重叠。
+ */
+export function createSparkleOctagramGeometry({
+  primary = {},
+  secondary = {},
+  secondaryRotation = Math.PI / 4,
+  halfThickness = 0.224,
+  edgeStart = 0.88,
+  edgeThicknessRatio = 0.12,
+  tipSharpAngle = 0.075,
+  sharpThicknessPower = 1.1,
+  radialSegments = 512,
+  rings = 80
+} = {}) {
+  const primaryVertical = buildRadiusProfile(primary.vertical)
+  const primaryHorizontal = buildRadiusProfile(primary.horizontal)
+  const secondaryVertical = buildRadiusProfile(secondary.vertical)
+  const secondaryHorizontal = buildRadiusProfile(secondary.horizontal)
+  const columns = Math.max(64, radialSegments - (radialSegments % 8))
+  const ringCount = Math.max(16, rings - 1)
+  const silhouette = new Float32Array(columns)
+  const tipWeight = new Float32Array(columns)
+  const tipStep = Math.PI / 4
+
+  const radialDistance = (vertical, horizontal, angle) => {
+    const sine = Math.sin(angle)
+    const cosine = Math.cos(angle)
+    return Math.max(
+      findBoundaryDistance(vertical, sine),
+      findBoundaryDistance(horizontal, cosine)
+    )
+  }
+
+  for (let column = 0; column < columns; column += 1) {
+    const angle = (column / columns) * Math.PI * 2
+    const primaryDistance = radialDistance(primaryVertical, primaryHorizontal, angle)
+    const secondaryDistance = radialDistance(
+      secondaryVertical,
+      secondaryHorizontal,
+      angle - secondaryRotation
+    )
+    silhouette[column] = Math.max(primaryDistance, secondaryDistance)
+    const nearestTip = Math.round(angle / tipStep) * tipStep
+    const tipDistance = Math.abs(angle - nearestTip)
+    tipWeight[column] = THREE.MathUtils.smoothstep(
+      tipDistance,
+      tipSharpAngle * 0.35,
+      tipSharpAngle
+    )
+  }
+
+  const topCenterIndex = 0
+  const bottomCenterIndex = 1
+  const topRingStart = 2
+  const bottomRingStart = topRingStart + ringCount * columns
+  const rimStart = bottomRingStart + ringCount * columns
+  const vertexCount = rimStart + columns
+  const topTriangles = columns * (1 + ringCount * 2)
+  const triangleCount = topTriangles * 2
+  const positions = new Float32Array(vertexCount * 3)
+  const indices = new Uint32Array(triangleCount * 3)
+  const writeVertex = (index, radius, angle, z) => {
+    const offset = index * 3
+    positions[offset] = Math.cos(angle) * radius
+    positions[offset + 1] = Math.sin(angle) * radius
+    positions[offset + 2] = z
+  }
+
+  writeVertex(topCenterIndex, 0, 0, halfThickness)
+  writeVertex(bottomCenterIndex, 0, 0, -halfThickness)
+
+  for (let ring = 0; ring < ringCount; ring += 1) {
+    const u = (ring + 1) / (ringCount + 1)
+    let roundedThickness
+
+    if (u <= edgeStart) {
+      const t = u / edgeStart
+      const h00 = 2 * t * t * t - 3 * t * t + 1
+      const h01 = -2 * t * t * t + 3 * t * t
+      roundedThickness =
+        h00 * halfThickness + h01 * halfThickness * edgeThicknessRatio
+    } else {
+      const edgeT = (u - edgeStart) / (1 - edgeStart)
+      roundedThickness =
+        halfThickness *
+        edgeThicknessRatio *
+        Math.sqrt(Math.max(1 - edgeT * edgeT, 0))
+    }
+    const sharpThickness =
+      halfThickness * Math.pow(1 - u * u, sharpThicknessPower)
+
+    for (let column = 0; column < columns; column += 1) {
+      const angle = (column / columns) * Math.PI * 2
+      const radius = silhouette[column] * u
+      const thickness = THREE.MathUtils.lerp(
+        sharpThickness,
+        roundedThickness,
+        tipWeight[column]
+      )
+      writeVertex(
+        topRingStart + ring * columns + column,
+        radius,
+        angle,
+        thickness
+      )
+      writeVertex(
+        bottomRingStart + ring * columns + column,
+        radius,
+        angle,
+        -thickness
+      )
+    }
+  }
+
+  for (let column = 0; column < columns; column += 1) {
+    const angle = (column / columns) * Math.PI * 2
+    writeVertex(rimStart + column, silhouette[column], angle, 0)
+  }
+
+  let cursor = 0
+  const pushTriangle = (a, b, c) => {
+    indices[cursor] = a
+    indices[cursor + 1] = b
+    indices[cursor + 2] = c
+    cursor += 3
+  }
+
+  for (let column = 0; column < columns; column += 1) {
+    const next = (column + 1) % columns
+    pushTriangle(
+      topCenterIndex,
+      topRingStart + column,
+      topRingStart + next
+    )
+    pushTriangle(
+      bottomCenterIndex,
+      bottomRingStart + next,
+      bottomRingStart + column
+    )
+  }
+
+  const pushBand = (innerStart, outerStart, flip = false) => {
+    for (let column = 0; column < columns; column += 1) {
+      const next = (column + 1) % columns
+      const a0 = innerStart + column
+      const a1 = innerStart + next
+      const b0 = outerStart + column
+      const b1 = outerStart + next
+
+      if (flip) {
+        pushTriangle(a0, b1, b0)
+        pushTriangle(a0, a1, b1)
+      } else {
+        pushTriangle(a0, b0, b1)
+        pushTriangle(a0, b1, a1)
+      }
+    }
+  }
+
+  for (let ring = 0; ring < ringCount - 1; ring += 1) {
+    const topInner = topRingStart + ring * columns
+    const topOuter = topInner + columns
+    const bottomInner = bottomRingStart + ring * columns
+    const bottomOuter = bottomInner + columns
+    pushBand(topInner, topOuter)
+    pushBand(bottomInner, bottomOuter, true)
+  }
+
+  const topLastRing = topRingStart + (ringCount - 1) * columns
+  const bottomLastRing = bottomRingStart + (ringCount - 1) * columns
+  pushBand(topLastRing, rimStart)
+  pushBand(bottomLastRing, rimStart, true)
+
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  geometry.setIndex(new THREE.BufferAttribute(indices, 1))
+  geometry.computeVertexNormals()
+  geometry.computeBoundingSphere()
+  return geometry
+}
+
+/**
  * 单根星针外段的右半母线采样点。
  * 返回值保留原始曲线，中心帽由 buildRadiusProfile 统一重建。
  */

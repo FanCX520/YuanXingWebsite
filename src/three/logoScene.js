@@ -1,5 +1,6 @@
 import * as THREE from 'three'
-import { createSparkleEmblemGeometry } from './starGeometry.js'
+import { createSparkleOctagramGeometry } from './starGeometry.js'
+import { createOrbitBandGeometry } from './orbitGeometry.js'
 
 // 星体外观：哑光深蓝，体积交给模型本身，材质只做基础塑形
 const STAR_MATERIAL = {
@@ -25,44 +26,51 @@ const NEEDLE = {
 }
 const VERTICAL_STAR = { ...NEEDLE, radiusX: 0.2, radiusY: 1.12 }
 const HORIZONTAL_STAR = { ...NEEDLE, radiusX: 0.2, radiusY: 1.02 }
-const EMBLEM = {
-  blendRadius: 0.035,
-  longitudes: 384,
-  latitudes: 128
-}
 const DIAGONAL_STAR = { ...NEEDLE, radiusX: 0.14, radiusY: 0.62 }
-const DIAGONAL_EMBLEM = {
-  blendRadius: 0.025,
-  longitudes: 256,
-  latitudes: 96
+const OCTAGRAM = {
+  halfThickness: 0.2243,
+  edgeStart: 0.88,
+  edgeThicknessRatio: 0.12,
+  radialSegments: 512,
+  rings: 96
 }
+const ORBITS = [
+  {
+    semiMajor: 1.42,
+    semiMinor: 0.58,
+    roll: -0.55,
+    tilt: 0.32,
+    depthOffset: 0.018,
+    thickness: 0.032,
+    taperStart: 0.02,
+    taperEnd: 0.48
+  },
+  {
+    semiMajor: 1.42,
+    semiMinor: 0.58,
+    roll: 0.55,
+    tilt: -0.32,
+    depthOffset: -0.018,
+    thickness: 0.032,
+    taperStart: 0.02,
+    taperEnd: 0.48
+  }
+]
 
-// 主星保持长针，斜向短针副本旋转 45° 作为背层，合成八角星轮廓
+// 八角轮廓由长针主星与 45° 短针星取并集，前后共用同一厚度场
 function buildStarEmblem(material) {
-  const group = new THREE.Group()
-  const mainGeometry = createSparkleEmblemGeometry({
-    vertical: VERTICAL_STAR,
-    horizontal: HORIZONTAL_STAR,
-    ...EMBLEM
+  const geometry = createSparkleOctagramGeometry({
+    primary: {
+      vertical: VERTICAL_STAR,
+      horizontal: HORIZONTAL_STAR
+    },
+    secondary: {
+      vertical: DIAGONAL_STAR,
+      horizontal: DIAGONAL_STAR
+    },
+    ...OCTAGRAM
   })
-  const backGeometry = createSparkleEmblemGeometry({
-    vertical: DIAGONAL_STAR,
-    horizontal: DIAGONAL_STAR,
-    ...DIAGONAL_EMBLEM
-  })
-  mainGeometry.computeBoundingBox()
-  backGeometry.computeBoundingBox()
-  const mainDepth =
-    mainGeometry.boundingBox.max.z - mainGeometry.boundingBox.min.z
-  const diagonalDepth =
-    backGeometry.boundingBox.max.z - backGeometry.boundingBox.min.z
-  const diagonalStar = new THREE.Mesh(backGeometry, material)
-  diagonalStar.rotation.z = Math.PI / 4
-  diagonalStar.scale.z = mainDepth / diagonalDepth
-  group.add(diagonalStar)
-
-  group.add(new THREE.Mesh(mainGeometry, material))
-  return group
+  return new THREE.Mesh(geometry, material)
 }
 
 // 程序化生成摄影棚式环境贴图：上亮下暗的蓝色渐变 + 两条高光带
@@ -159,9 +167,20 @@ export function createLogoScene(canvas) {
     emissiveIntensity: STAR_MATERIAL.emissiveIntensity,
     envMapIntensity: STAR_MATERIAL.envMapIntensity
   })
+  const orbitMaterial = starMaterial.clone()
+  orbitMaterial.color.set(0x0d1830)
+  orbitMaterial.metalness = 0.52
+  orbitMaterial.roughness = 0.34
+  orbitMaterial.clearcoat = 0.22
+  orbitMaterial.clearcoatRoughness = 0.45
+  orbitMaterial.emissiveIntensity = 0.05
+  orbitMaterial.envMapIntensity = 0.82
 
   const root = new THREE.Group()
   root.add(buildStarEmblem(starMaterial))
+  for (const orbit of ORBITS) {
+    root.add(new THREE.Mesh(createOrbitBandGeometry(orbit), orbitMaterial))
+  }
   scene.add(root)
 
   const pointer = { x: 0, y: 0 }
@@ -236,6 +255,7 @@ export function createLogoScene(canvas) {
       })
       geometries.forEach((geometry) => geometry.dispose())
       starMaterial.dispose()
+      orbitMaterial.dispose()
       environment.dispose()
       renderer.dispose()
     }
