@@ -10,6 +10,11 @@ export function createOrbitBandGeometry({
   semiMinor = 0.58,
   roll = 0,
   tilt = 0,
+  tiltY = 0,
+  planeRoll = 0,
+  centerX = 0,
+  centerY = 0,
+  centerZ = 0,
   depthOffset = 0,
   thickness = 0.03,
   taperStart = 0.02,
@@ -19,9 +24,12 @@ export function createOrbitBandGeometry({
 } = {}) {
   const zAxis = new THREE.Vector3(0, 0, 1)
   const xAxis = new THREE.Vector3(1, 0, 0)
+  const yAxis = new THREE.Vector3(0, 1, 0)
   const planeNormal = new THREE.Vector3(0, 0, 1)
     .applyAxisAngle(zAxis, roll)
     .applyAxisAngle(xAxis, tilt)
+    .applyAxisAngle(yAxis, tiltY)
+    .applyAxisAngle(zAxis, planeRoll)
     .normalize()
   const points = []
 
@@ -34,7 +42,11 @@ export function createOrbitBandGeometry({
     )
     point.applyAxisAngle(zAxis, roll)
     point.applyAxisAngle(xAxis, tilt)
-    point.z += depthOffset
+    point.applyAxisAngle(yAxis, tiltY)
+    point.applyAxisAngle(zAxis, planeRoll)
+    point.x += centerX
+    point.y += centerY
+    point.z += centerZ + depthOffset
     points.push(point)
   }
 

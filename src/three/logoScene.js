@@ -36,22 +36,30 @@ const OCTAGRAM = {
 }
 const ORBITS = [
   {
-    semiMajor: 1.42,
-    semiMinor: 0.58,
-    roll: -0.55,
-    tilt: 0.32,
-    depthOffset: 0.018,
-    thickness: 0.032,
+    semiMajor: 1.28,
+    semiMinor: 1.28,
+    roll: 0,
+    tilt: 1.05,
+    tiltY: 0.12,
+    planeRoll: 0.55,
+    centerX: 0,
+    centerY: 0,
+    depthOffset: 0.02,
+    thickness: 0.045,
     taperStart: 0.02,
     taperEnd: 0.48
   },
   {
-    semiMajor: 1.42,
-    semiMinor: 0.58,
-    roll: 0.55,
-    tilt: -0.32,
-    depthOffset: -0.018,
-    thickness: 0.032,
+    semiMajor: 1.15,
+    semiMinor: 1.15,
+    roll: 0,
+    tilt: -1.05,
+    tiltY: -0.12,
+    planeRoll: -0.55,
+    centerX: 0,
+    centerY: 0,
+    depthOffset: -0.02,
+    thickness: 0.04,
     taperStart: 0.02,
     taperEnd: 0.48
   }
