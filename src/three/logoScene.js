@@ -1,148 +1,106 @@
 import * as THREE from 'three'
-import { createGalaxyMaterial } from './galaxyMaterial.js'
-import {
-  createOrbitTubeGeometry,
-  createPointedArcShape,
-  createSparkle3DGeometry,
-  createSparkleShape,
-  createSpikeShape,
-  extrudeShape
-} from './emblemGeometry.js'
+import { createSparkleEmblemGeometry } from './starGeometry.js'
 
-const COLORS = {
-  background: 0x070b18,
-  frameBlue: 0x4f86f0,
-  emblemDark: 0x121f3a,
-  emblemEmissive: 0x1a3a7a,
-  dust: 0x7ec8ff
+// 星体外观：哑光深蓝，体积交给模型本身，材质只做基础塑形
+const STAR_MATERIAL = {
+  color: 0x213c6e,
+  metalness: 0.55,
+  roughness: 0.42,
+  clearcoat: 0.3,
+  clearcoatRoughness: 0.4,
+  emissive: 0x060c1c,
+  emissiveIntensity: 0.12,
+  envMapIntensity: 0.9
 }
 
-function buildOuterFrame() {
-  const group = new THREE.Group()
-  const material = new THREE.MeshStandardMaterial({
-    color: COLORS.frameBlue,
-    metalness: 0.32,
-    roughness: 0.42,
-    emissive: new THREE.Color(0x1d4fd8),
-    emissiveIntensity: 0.16
-  })
-
-  const innerRadius = 1.02
-  const outerRadius = 1.14
-  const gap = 0.28
-  const arcSpan = Math.PI / 2 - gap
-
-  for (let i = 0; i < 4; i += 1) {
-    const center = i * (Math.PI / 2)
-    const start = center - arcSpan / 2
-    const end = center + arcSpan / 2
-    const shape = createPointedArcShape(innerRadius, outerRadius, start, end, 0.16)
-    const mesh = new THREE.Mesh(extrudeShape(shape, 0.07, 0.01), material)
-    mesh.position.z = 0.02
-    group.add(mesh)
-  }
-
-  const spikeShape = createSpikeShape(0.58, 0.075, 0.16)
-  const spikeGeometry = extrudeShape(spikeShape, 0.06, 0.008)
-  for (let i = 0; i < 4; i += 1) {
-    const angle = Math.PI / 4 + i * (Math.PI / 2)
-    const mesh = new THREE.Mesh(spikeGeometry, material)
-    mesh.position.set(Math.cos(angle) * 1.1, Math.sin(angle) * 1.1, 0.02)
-    mesh.rotation.z = angle - Math.PI / 2
-    group.add(mesh)
-  }
-
-  return group
+// 星芒比例取自参考图测量值：针芒细长、谷点内凹
+// concavity 控制边缘内凹深度：越大针芒越细越锋利
+// radiusX 控制针芒根部的鼓包半径，radiusY 控制针芒长度
+// valleyX / valleyY 控制谷点位置：贴近 1 时根部过渡平滑
+const NEEDLE = {
+  valleyX: 0.85,
+  valleyY: 0.05,
+  concavity: 0.76,
+  curveSegments: 64
+}
+const VERTICAL_STAR = { ...NEEDLE, radiusX: 0.2, radiusY: 1.12 }
+const HORIZONTAL_STAR = { ...NEEDLE, radiusX: 0.2, radiusY: 1.02 }
+const EMBLEM = {
+  blendRadius: 0.035,
+  longitudes: 384,
+  latitudes: 128
 }
 
-function buildDarkEmblem() {
-  const group = new THREE.Group()
-
-  // 星体：金属感 + 淡蓝自发光，棱面会被灯光切出来
-  const starMaterial = new THREE.MeshStandardMaterial({
-    color: 0x162645,
-    metalness: 0.62,
-    roughness: 0.28,
-    emissive: new THREE.Color(0x2448a0),
-    emissiveIntensity: 0.42,
-    flatShading: true
+// 十字星芒由垂直、水平两根星针平滑并集成单体外壳
+function buildStarEmblem(material) {
+  const geometry = createSparkleEmblemGeometry({
+    vertical: VERTICAL_STAR,
+    horizontal: HORIZONTAL_STAR,
+    ...EMBLEM
   })
-
-  const orbitMaterial = new THREE.MeshStandardMaterial({
-    color: COLORS.emblemDark,
-    metalness: 0.5,
-    roughness: 0.38,
-    emissive: new THREE.Color(COLORS.emblemEmissive),
-    emissiveIntensity: 0.22
-  })
-
-  // 立体主星：射线修长，棱面受光
-  const star = new THREE.Mesh(createSparkle3DGeometry(0.88, 1.2, 0.125), starMaterial)
-  star.position.z = 0.22
-  group.add(star)
-
-  // 双轨道管
-  const orbitGeometry = createOrbitTubeGeometry(0.82, 0.42, 0.032)
-
-  const orbitA = new THREE.Mesh(orbitGeometry, orbitMaterial)
-  orbitA.position.z = 0.12
-  orbitA.rotation.z = THREE.MathUtils.degToRad(-24)
-  group.add(orbitA)
-
-  const orbitB = new THREE.Mesh(orbitGeometry, orbitMaterial)
-  orbitB.position.z = 0.13
-  orbitB.rotation.z = THREE.MathUtils.degToRad(66)
-  orbitB.scale.setScalar(0.96)
-  group.add(orbitB)
-
-  // 小火花：扁一点的立体星
-  const sparkGeometry = createSparkle3DGeometry(0.13, 0.17, 0.035)
-  const sparkPositions = [
-    [-0.52, 0.42, 0.95],
-    [0.42, 0.48, 0.85],
-    [0.6, -0.12, 0.72],
-    [-0.38, -0.5, 0.82],
-    [0.2, -0.56, 0.66],
-    [-0.58, -0.04, 0.6]
-  ]
-
-  for (const [x, y, s] of sparkPositions) {
-    const mesh = new THREE.Mesh(sparkGeometry, starMaterial)
-    mesh.position.set(x, y, 0.14)
-    mesh.scale.setScalar(s)
-    mesh.rotation.z = Math.random() * Math.PI
-    group.add(mesh)
-  }
-
-  return group
+  return new THREE.Mesh(geometry, material)
 }
 
-function buildDustField() {
-  const count = 220
-  const positions = new Float32Array(count * 3)
+// 程序化生成摄影棚式环境贴图：上亮下暗的蓝色渐变 + 两条高光带
+function createStudioEnvironment(renderer) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 1024
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
 
-  for (let i = 0; i < count; i += 1) {
-    const radius = 1.3 + Math.random() * 2.2
-    const theta = Math.random() * Math.PI * 2
-    const y = (Math.random() - 0.5) * 2.6
-    positions[i * 3] = Math.cos(theta) * radius
-    positions[i * 3 + 1] = y
-    positions[i * 3 + 2] = (Math.random() - 0.5) * 2.0
+  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height)
+  sky.addColorStop(0, '#0b1430')
+  sky.addColorStop(0.4, '#2f57a6')
+  sky.addColorStop(0.55, '#16294f')
+  sky.addColorStop(1, '#04060d')
+  ctx.fillStyle = sky
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+  const band = (x, y, w, h, color, alpha) => {
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, w)
+    gradient.addColorStop(0, color)
+    gradient.addColorStop(1, 'rgba(0,0,0,0)')
+    ctx.globalAlpha = alpha
+    ctx.fillStyle = gradient
+    ctx.save()
+    ctx.translate(x, y)
+    ctx.scale(1, h / w)
+    ctx.translate(-x, -y)
+    ctx.fillRect(x - w, y - w, w * 2, w * 2)
+    ctx.restore()
+    ctx.globalAlpha = 1
   }
 
-  const geometry = new THREE.BufferGeometry()
-  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  band(300, 150, 320, 130, '#eaf2ff', 0.95)
+  band(760, 190, 260, 110, '#7db4ff', 0.8)
+  band(520, 400, 360, 150, '#20408a', 0.7)
 
-  const material = new THREE.PointsMaterial({
-    color: COLORS.dust,
-    size: 0.015,
-    transparent: true,
-    opacity: 0.45,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending
-  })
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.mapping = THREE.EquirectangularReflectionMapping
+  texture.colorSpace = THREE.SRGBColorSpace
 
-  return new THREE.Points(geometry, material)
+  const pmrem = new THREE.PMREMGenerator(renderer)
+  const envMap = pmrem.fromEquirectangular(texture).texture
+  pmrem.dispose()
+  texture.dispose()
+  return envMap
+}
+
+// 冷色三点光：主光塑形、轮廓光勾边、底部补光
+function buildLights(scene) {
+  scene.add(new THREE.AmbientLight(0x24365e, 0.7))
+
+  const key = new THREE.DirectionalLight(0xdceaff, 2.2)
+  key.position.set(2.6, 3.0, 4.4)
+  scene.add(key)
+
+  const rim = new THREE.DirectionalLight(0x4f8dff, 1.5)
+  rim.position.set(-3.4, -1.6, 2.6)
+  scene.add(rim)
+
+  const fill = new THREE.PointLight(0x86bcff, 26, 16, 2)
+  fill.position.set(0, -2.2, 3.2)
+  scene.add(fill)
 }
 
 export function createLogoScene(canvas) {
@@ -153,53 +111,34 @@ export function createLogoScene(canvas) {
     powerPreference: 'high-performance'
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.setClearColor(COLORS.background, 1)
   renderer.outputColorSpace = THREE.SRGBColorSpace
+  renderer.toneMapping = THREE.ACESFilmicToneMapping
+  renderer.toneMappingExposure = 1.1
 
   const scene = new THREE.Scene()
-  scene.fog = new THREE.FogExp2(COLORS.background, 0.035)
+  const environment = createStudioEnvironment(renderer)
+  scene.environment = environment
 
-  const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 50)
-  camera.position.set(0, 0.12, 5.4)
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50)
+  // 相机接近水平：水平视角下轮廓呈 + 星，体积由光影与俯仰揭示
+  camera.position.set(0, 0.15, 4.6)
 
-  // 冷色三点光，突出棱面与体积
-  scene.add(new THREE.AmbientLight(0x6a86c8, 0.55))
+  buildLights(scene)
 
-  const key = new THREE.DirectionalLight(0xd8e8ff, 1.45)
-  key.position.set(3.2, 2.6, 4.8)
-  scene.add(key)
-
-  const rim = new THREE.DirectionalLight(0x5b9bff, 0.95)
-  rim.position.set(-3.6, -1.4, 2.0)
-  scene.add(rim)
-
-  const fill = new THREE.PointLight(0x8ed2ff, 16, 14, 2)
-  fill.position.set(0, -1.4, 3.0)
-  scene.add(fill)
+  const starMaterial = new THREE.MeshPhysicalMaterial({
+    color: STAR_MATERIAL.color,
+    metalness: STAR_MATERIAL.metalness,
+    roughness: STAR_MATERIAL.roughness,
+    clearcoat: STAR_MATERIAL.clearcoat,
+    clearcoatRoughness: STAR_MATERIAL.clearcoatRoughness,
+    emissive: new THREE.Color(STAR_MATERIAL.emissive),
+    emissiveIntensity: STAR_MATERIAL.emissiveIntensity,
+    envMapIntensity: STAR_MATERIAL.envMapIntensity
+  })
 
   const root = new THREE.Group()
+  root.add(buildStarEmblem(starMaterial))
   scene.add(root)
-
-  const galaxyMaterial = createGalaxyMaterial()
-  const galaxy = new THREE.Mesh(new THREE.CircleGeometry(1.08, 128), galaxyMaterial)
-  root.add(galaxy)
-
-  root.add(buildOuterFrame())
-  root.add(buildDarkEmblem())
-
-  const dust = buildDustField()
-  scene.add(dust)
-
-  const glowMaterial = new THREE.MeshBasicMaterial({
-    color: 0x2f66d8,
-    transparent: true,
-    opacity: 0.12,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false
-  })
-  const glow = new THREE.Mesh(new THREE.CircleGeometry(1.42, 64), glowMaterial)
-  glow.position.z = -0.06
-  root.add(glow)
 
   const pointer = { x: 0, y: 0 }
   const targetTilt = { x: 0, y: 0 }
@@ -220,8 +159,8 @@ export function createLogoScene(canvas) {
     const rect = canvas.getBoundingClientRect()
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
     pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1)
-    targetTilt.y = pointer.x * 0.28
-    targetTilt.x = pointer.y * 0.18
+    targetTilt.y = pointer.x * 0.3
+    targetTilt.x = pointer.y * 0.2
   }
 
   function onPointerLeave() {
@@ -235,24 +174,19 @@ export function createLogoScene(canvas) {
     lastTime = now
     elapsed += delta
 
-    galaxyMaterial.uniforms.uTime.value = elapsed
-
-    // 缓慢摇摆，展示立体棱面
-    const sway = Math.sin(elapsed * 0.32) * 0.22
-    const pitch = Math.cos(elapsed * 0.24) * 0.1
+    // 旋转体绕垂直轴对称，体积靠俯仰角度展示；鼠标位置叠加微倾
+    const sway = Math.sin(elapsed * 0.28) * 0.12
+    const pitch = Math.sin(elapsed * 0.24) * 0.18
     currentTilt.x = THREE.MathUtils.lerp(currentTilt.x, targetTilt.x + pitch, 0.05)
     currentTilt.y = THREE.MathUtils.lerp(currentTilt.y, targetTilt.y + sway, 0.05)
 
     root.rotation.x = currentTilt.x
     root.rotation.y = currentTilt.y
-    root.position.y = Math.sin(elapsed * 0.5) * 0.045
+    root.position.y = Math.sin(elapsed * 0.45) * 0.035
 
-    camera.position.x = THREE.MathUtils.lerp(camera.position.x, pointer.x * 0.32, 0.04)
-    camera.position.y = THREE.MathUtils.lerp(camera.position.y, 0.12 + pointer.y * 0.2, 0.04)
+    camera.position.x = THREE.MathUtils.lerp(camera.position.x, pointer.x * 0.3, 0.04)
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, 0.15 + pointer.y * 0.2, 0.04)
     camera.lookAt(0, 0, 0)
-
-    dust.rotation.y = elapsed * 0.025
-    dust.rotation.x = Math.sin(elapsed * 0.1) * 0.06
 
     renderer.render(scene, camera)
     frameId = requestAnimationFrame(tick)
@@ -272,13 +206,13 @@ export function createLogoScene(canvas) {
       canvas.removeEventListener('pointermove', onPointerMove)
       canvas.removeEventListener('pointerleave', onPointerLeave)
 
-      scene.traverse((object) => {
-        if (!object.isMesh && !object.isPoints) return
-        object.geometry?.dispose?.()
-        const materials = Array.isArray(object.material) ? object.material : [object.material]
-        materials.forEach((material) => material?.dispose?.())
+      const geometries = new Set()
+      root.traverse((object) => {
+        if (object.isMesh && object.geometry) geometries.add(object.geometry)
       })
-      galaxyMaterial.dispose()
+      geometries.forEach((geometry) => geometry.dispose())
+      starMaterial.dispose()
+      environment.dispose()
       renderer.dispose()
     }
   }
