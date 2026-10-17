@@ -30,15 +30,39 @@ const EMBLEM = {
   longitudes: 384,
   latitudes: 128
 }
+const DIAGONAL_STAR = { ...NEEDLE, radiusX: 0.14, radiusY: 0.62 }
+const DIAGONAL_EMBLEM = {
+  blendRadius: 0.025,
+  longitudes: 256,
+  latitudes: 96
+}
 
-// 十字星芒由垂直、水平两根星针平滑并集成单体外壳
+// 主星保持长针，斜向短针副本旋转 45° 作为背层，合成八角星轮廓
 function buildStarEmblem(material) {
-  const geometry = createSparkleEmblemGeometry({
+  const group = new THREE.Group()
+  const mainGeometry = createSparkleEmblemGeometry({
     vertical: VERTICAL_STAR,
     horizontal: HORIZONTAL_STAR,
     ...EMBLEM
   })
-  return new THREE.Mesh(geometry, material)
+  const backGeometry = createSparkleEmblemGeometry({
+    vertical: DIAGONAL_STAR,
+    horizontal: DIAGONAL_STAR,
+    ...DIAGONAL_EMBLEM
+  })
+  mainGeometry.computeBoundingBox()
+  backGeometry.computeBoundingBox()
+  const mainDepth =
+    mainGeometry.boundingBox.max.z - mainGeometry.boundingBox.min.z
+  const diagonalDepth =
+    backGeometry.boundingBox.max.z - backGeometry.boundingBox.min.z
+  const diagonalStar = new THREE.Mesh(backGeometry, material)
+  diagonalStar.rotation.z = Math.PI / 4
+  diagonalStar.scale.z = mainDepth / diagonalDepth
+  group.add(diagonalStar)
+
+  group.add(new THREE.Mesh(mainGeometry, material))
+  return group
 }
 
 // 程序化生成摄影棚式环境贴图：上亮下暗的蓝色渐变 + 两条高光带

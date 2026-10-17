@@ -118,10 +118,13 @@ export function createSparkleEmblemGeometry({
   const positions = new Float32Array(vertexCount * 3)
   const indices = new Uint32Array(triangleCount * 3)
 
-  const writeVertex = (index, nx, ny, nz) => {
+  const getDistance = (nx, ny, nz) => {
     const verticalDistance = findBoundaryDistance(verticalProfile, ny)
     const horizontalDistance = findBoundaryDistance(horizontalProfile, nx)
-    const distance = smoothMax(verticalDistance, horizontalDistance, blendRadius)
+    return smoothMax(verticalDistance, horizontalDistance, blendRadius)
+  }
+
+  const writeVertex = (index, nx, ny, nz, distance = getDistance(nx, ny, nz)) => {
     const offset = index * 3
     positions[offset] = nx * distance
     positions[offset + 1] = ny * distance
@@ -134,16 +137,13 @@ export function createSparkleEmblemGeometry({
     const phi = (row / rows) * Math.PI
     const sinPhi = Math.sin(phi)
     const cosPhi = Math.cos(phi)
-
     for (let column = 0; column < columns; column += 1) {
       const theta = (column / columns) * Math.PI * 2
+      const nx = sinPhi * Math.cos(theta)
+      const ny = sinPhi * Math.sin(theta)
+      const distance = getDistance(nx, ny, cosPhi)
       const vertexIndex = 1 + (row - 1) * columns + column
-      writeVertex(
-        vertexIndex,
-        sinPhi * Math.cos(theta),
-        sinPhi * Math.sin(theta),
-        cosPhi
-      )
+      writeVertex(vertexIndex, nx, ny, cosPhi, distance)
     }
   }
 
@@ -160,7 +160,7 @@ export function createSparkleEmblemGeometry({
 
   for (let column = 0; column < columns; column += 1) {
     const next = (column + 1) % columns
-    pushTriangle(0, 1 + next, 1 + column)
+    pushTriangle(0, 1 + column, 1 + next)
   }
 
   for (let row = 0; row < rows - 2; row += 1) {
@@ -169,15 +169,15 @@ export function createSparkleEmblemGeometry({
 
     for (let column = 0; column < columns; column += 1) {
       const next = (column + 1) % columns
-      pushTriangle(current + column, current + next, below + column)
-      pushTriangle(current + next, below + next, below + column)
+      pushTriangle(current + column, below + column, current + next)
+      pushTriangle(current + next, below + column, below + next)
     }
   }
 
   const lastRing = 1 + (rows - 2) * columns
   for (let column = 0; column < columns; column += 1) {
     const next = (column + 1) % columns
-    pushTriangle(lastRing + column, lastRing + next, bottomIndex)
+    pushTriangle(lastRing + column, bottomIndex, lastRing + next)
   }
 
   const geometry = new THREE.BufferGeometry()
