@@ -22,6 +22,8 @@ const starFragmentShader = /* glsl */ `
   precision highp float;
 
   uniform float uTime;
+  uniform float uIntro;
+  uniform float uReveal;
   varying vec3 vLocalPosition;
   varying vec3 vNormal;
   varying vec3 vViewDirection;
@@ -69,6 +71,9 @@ const starFragmentShader = /* glsl */ `
     color += starColor * fineStars * pulse * 0.72;
     color += vec3(1.0, 0.985, 0.88) * brightStars * pulse * 0.95;
     color += vec3(0.68, 0.82, 1.0) * rim * 0.28;
+    // 开场：光从星心向外扩散，uReveal 为当前扩散半径
+    float reveal = 1.0 - smoothstep(uReveal - 0.32, uReveal + 0.12, length(vLocalPosition.xy));
+    color *= uIntro * mix(0.02, 1.0, reveal);
     gl_FragColor = vec4(color, 1.0);
   }
 `
@@ -77,6 +82,8 @@ const ribbonFragmentShader = /* glsl */ `
   precision highp float;
 
   uniform float uTime;
+  uniform float uIntro;
+  uniform float uReveal;
   uniform vec3 uStarLightPosition;
   uniform vec3 uStarLightColor;
   uniform float uStarLightPower;
@@ -133,6 +140,9 @@ const ribbonFragmentShader = /* glsl */ `
     vec3 toStar = normalize(uStarLightPosition - vWorldPosition);
     float lightFacing = max(dot(normal, toStar), 0.0);
     color += uStarLightColor * starLight * lightFacing * (0.025 + galaxyBand * 0.06);
+    // 开场：光波从星心扫过环带，uReveal 为当前波前半径
+    float ringWave = 1.0 - smoothstep(uReveal - 0.5, uReveal, length(vLocalPosition.xy));
+    color *= uIntro * mix(0.03, 1.0, ringWave);
     gl_FragColor = vec4(color, 1.0);
   }
 `
@@ -141,6 +151,7 @@ const glowFragmentShader = /* glsl */ `
   precision highp float;
 
   uniform float uTime;
+  uniform float uIntro;
   varying vec3 vNormal;
   varying vec3 vViewDirection;
   varying vec3 vWorldPosition;
@@ -151,7 +162,7 @@ const glowFragmentShader = /* glsl */ `
     float fresnel = pow(1.0 - max(dot(normal, viewDirection), 0.0), 2.4);
     float pulse = 0.82 + 0.18 * sin(uTime * 1.15);
     vec3 starColor = vec3(1.0, 0.94, 0.72);
-    gl_FragColor = vec4(starColor * fresnel * pulse, fresnel * 0.46);
+    gl_FragColor = vec4(starColor * fresnel * pulse * uIntro, fresnel * 0.46 * uIntro);
   }
 `
 
@@ -161,6 +172,8 @@ function createMaterial(fragmentShader) {
     fragmentShader,
     uniforms: {
       uTime: { value: 0 },
+      uIntro: { value: 0 },
+      uReveal: { value: -0.2 },
       uStarLightPosition: { value: new THREE.Vector3() },
       uStarLightColor: { value: new THREE.Color(0xfff4d6) },
       uStarLightPower: { value: 1.5 },
@@ -180,6 +193,7 @@ function createGlowMaterial() {
     fragmentShader: glowFragmentShader,
     uniforms: {
       uTime: { value: 0 },
+      uIntro: { value: 0 },
       uStarLightPosition: { value: new THREE.Vector3() },
       uStarLightColor: { value: new THREE.Color(0xfff4d6) },
       uStarLightPower: { value: 1.0 }

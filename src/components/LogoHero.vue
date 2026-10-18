@@ -2,6 +2,9 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { createLogoScene } from '../three/logoScene.js'
 
+const props = defineProps({
+  onFrame: { type: Function, default: null }
+})
 const emit = defineEmits(['light-update'])
 const canvasRef = ref(null)
 let sceneHandle = null
@@ -12,13 +15,18 @@ onMounted(() => {
   sceneHandle = createLogoScene(canvasRef.value, {
     view: params.get('view') || 'front',
     animate: params.get('motion') !== 'off',
-    onLightUpdate: (state) => emit('light-update', state)
+    onLightUpdate: (state) => emit('light-update', state),
+    onFrame: () => props.onFrame?.()
   })
 })
 
 onBeforeUnmount(() => {
   sceneHandle?.destroy()
   sceneHandle = null
+})
+
+defineExpose({
+  getScene: () => sceneHandle
 })
 </script>
 

@@ -116,7 +116,7 @@ function buildLights(scene) {
   scene.add(fill)
 }
 
-export function createLogoScene(canvas, { animate = true, view = 'front', onLightUpdate } = {}) {
+export function createLogoScene(canvas, { animate = true, view = 'front', onLightUpdate, onFrame } = {}) {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -168,6 +168,19 @@ export function createLogoScene(canvas, { animate = true, view = 'front', onLigh
   scene.add(root)
   const bloom = createLogoBloom(renderer, scene, camera)
 
+  // 开场动画状态：由外部时间轴（Anime.js）直接改写，渲染循环每帧读取并应用
+  const intro = {
+    starReveal: -0.2,
+    ringReveal: 0.25,
+    star: 0,
+    ribbon: 0,
+    glow: 0,
+    light: 0,
+    bloom: 0,
+    motion: 0
+  }
+  const STAR_LIGHT_INTENSITY = starLight.intensity
+
   const pointer = { x: 0, y: 0 }
   const targetTilt = { x: 0, y: 0 }
   const currentTilt = { x: 0, y: 0 }
@@ -177,6 +190,16 @@ export function createLogoScene(canvas, { animate = true, view = 'front', onLigh
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   const starLightWorldPosition = new THREE.Vector3()
   const starLightScreenPosition = new THREE.Vector3()
+
+  function applyIntro() {
+    starMaterial.uniforms.uIntro.value = intro.star
+    starMaterial.uniforms.uReveal.value = intro.starReveal
+    orbitMaterial.uniforms.uIntro.value = intro.ribbon
+    orbitMaterial.uniforms.uReveal.value = intro.ringReveal
+    cosmicMaterials.starGlow.uniforms.uIntro.value = intro.glow
+    starLight.intensity = STAR_LIGHT_INTENSITY * intro.light
+    bloom.setIntensity(intro.bloom)
+  }
 
   function resize() {
     const width = canvas.clientWidth || canvas.parentElement?.clientWidth || 1
@@ -190,6 +213,7 @@ export function createLogoScene(canvas, { animate = true, view = 'front', onLigh
     camera.top = halfHeight
     camera.bottom = -halfHeight
     camera.updateProjectionMatrix()
+    applyIntro()
     bloom.render()
   }
 
@@ -214,17 +238,22 @@ export function createLogoScene(canvas, { animate = true, view = 'front', onLigh
     lastTime = now
     elapsed += delta
 
+    onFrame?.()
+    applyIntro()
+
     // 固定正视相机，小幅转动整个徽章，保留原图交汇点与主轮廓。
-    const motion = animate && !isSideView && !reducedMotion.matches
-    const sway = motion ? Math.sin(elapsed * 0.28) * 0.012 : 0
-    const pitch = motion ? Math.sin(elapsed * 0.24) * 0.015 : 0
+    const motionEnabled = animate && !isSideView && !reducedMotion.matches
+    // 开场期间先锁住摆动与指针视差，动画结束后再交给交互相
+    const motionScale = motionEnabled ? intro.motion : 0
+    const sway = Math.sin(elapsed * 0.28) * 0.012 * motionScale
+    const pitch = Math.sin(elapsed * 0.24) * 0.015 * motionScale
     const damping = 1 - Math.exp(-8 * delta)
-    currentTilt.x = THREE.MathUtils.lerp(currentTilt.x, motion ? targetTilt.x + pitch : 0, damping)
-    currentTilt.y = THREE.MathUtils.lerp(currentTilt.y, motion ? targetTilt.y + sway : 0, damping)
+    currentTilt.x = THREE.MathUtils.lerp(currentTilt.x, (targetTilt.x + pitch) * motionScale, damping)
+    currentTilt.y = THREE.MathUtils.lerp(currentTilt.y, (targetTilt.y + sway) * motionScale, damping)
 
     root.rotation.x = currentTilt.x
     root.rotation.y = currentTilt.y
-    root.position.y = motion ? Math.sin(elapsed * 0.45) * 0.008 : 0
+    root.position.y = Math.sin(elapsed * 0.45) * 0.008 * motionScale
     root.updateMatrixWorld()
     starLight.getWorldPosition(starLightWorldPosition)
     starLightScreenPosition.copy(starLightWorldPosition).project(camera)
@@ -234,9 +263,9 @@ export function createLogoScene(canvas, { animate = true, view = 'front', onLigh
       visible: starLightScreenPosition.z > -1 && starLightScreenPosition.z < 1
     })
 
-    cosmicMaterials.star.uniforms.uTime.value = motion ? elapsed : 0
-    cosmicMaterials.ribbon.uniforms.uTime.value = motion ? elapsed : 0
-    cosmicMaterials.starGlow.uniforms.uTime.value = motion ? elapsed : 0
+    cosmicMaterials.star.uniforms.uTime.value = motionEnabled ? elapsed : 0
+    cosmicMaterials.ribbon.uniforms.uTime.value = motionEnabled ? elapsed : 0
+    cosmicMaterials.starGlow.uniforms.uTime.value = motionEnabled ? elapsed : 0
     cosmicMaterials.ribbon.uniforms.uStarLightPosition.value.copy(starLightWorldPosition)
     cosmicMaterials.ribbon.uniforms.uStarLightColor.value.copy(starLight.color)
     cosmicMaterials.ribbon.uniforms.uStarLightPower.value = starLight.intensity
@@ -257,6 +286,7 @@ export function createLogoScene(canvas, { animate = true, view = 'front', onLigh
   return {
     root,
     parts,
+    intro,
     destroy() {
       cancelAnimationFrame(frameId)
       ro.disconnect()

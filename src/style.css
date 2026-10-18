@@ -5,6 +5,13 @@
   --ink-dim: #8b97b8;
   --accent: #5b8def;
   --accent-bright: #7ec8ff;
+  /* 开屏动画状态（由 src/intro/intro.js 驱动），默认值即黑场状态 */
+  --intro-wordmark: 0.15;
+  --intro-glow: 0;
+  --intro-spread: 1.5;
+  --intro-shift: -30;
+  --intro-reveal: 0;
+  --intro-backdrop: 0;
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 
@@ -24,4 +31,16 @@ body,
 body {
   min-height: 100vh;
   overflow-x: hidden;
+}
+
+/* 减少动态效果时直接呈现完整画面 */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --intro-wordmark: 1;
+    --intro-glow: 1;
+    --intro-spread: 1;
+    --intro-shift: 0;
+    --intro-reveal: 1;
+    --intro-backdrop: 1;
+  }
 }

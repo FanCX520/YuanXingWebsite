@@ -1,11 +1,22 @@
 <script setup>
-import { ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import LogoHero from './components/LogoHero.vue'
 import SpaceBackdrop from './components/SpaceBackdrop.vue'
+import { initIntro, updateIntroEngine } from './intro/intro.js'
 
 const brandWordmarkRef = ref(null)
 const wordmarkLightRef = ref(null)
 const logoHeroRef = ref(null)
+let introHandle = null
+
+onMounted(() => {
+  introHandle = initIntro({ scene: logoHeroRef.value?.getScene() ?? null })
+})
+
+onBeforeUnmount(() => {
+  introHandle?.dispose()
+  introHandle = null
+})
 
 function updateLight({ x, y, visible }) {
   const wordmark = brandWordmarkRef.value
@@ -34,7 +45,7 @@ function updateLight({ x, y, visible }) {
         <h1 class="brand-wordmark__text brand-wordmark__base">元星联邦</h1>
         <span ref="wordmarkLightRef" class="brand-wordmark__text brand-wordmark__glow" aria-hidden="true">元星联邦</span>
       </div>
-      <LogoHero ref="logoHeroRef" @light-update="updateLight" />
+      <LogoHero ref="logoHeroRef" :on-frame="updateIntroEngine" @light-update="updateLight" />
     </section>
   </main>
 </template>
@@ -89,6 +100,18 @@ function updateLight({ x, y, visible }) {
 
 .brand-wordmark__base {
   color: transparent;
+  opacity: var(--intro-wordmark, 1);
+  /* 开场时从"中间上方"向外展开的显现掩膜，--intro-reveal 由 0 涨到 1 */
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 0%,
+    #000 calc(var(--intro-reveal, 1) * 100%),
+    transparent calc(var(--intro-reveal, 1) * 100% + 12%)
+  );
+  mask-image: radial-gradient(
+    circle at 50% 0%,
+    #000 calc(var(--intro-reveal, 1) * 100%),
+    transparent calc(var(--intro-reveal, 1) * 100% + 12%)
+  );
   /* 色标用 em 锚回 1em 行盒：内边距只把渐变盒撑高，不改变渐变在字形上的分布 */
   background: linear-gradient(
     180deg,
@@ -103,9 +126,10 @@ function updateLight({ x, y, visible }) {
 
 .brand-wordmark__glow {
   color: transparent;
-  /* 原 220% 是相对 1em 行盒的 2.2em，改用 em 固定纵向光斑，不受内边距影响 */
+  /* 开场时高光从字标上方更远处落下、由窄变宽；--intro-* 由开屏时间轴驱动 */
   background: radial-gradient(
-    ellipse 34% 2.2em at var(--light-x) var(--light-y),
+    ellipse calc(34% * var(--intro-spread, 1)) calc(2.2em * var(--intro-spread, 1))
+      at var(--light-x) calc(var(--light-y) + var(--intro-shift, 0) * 1%),
     rgba(255, 255, 246, 1) 0%,
     rgba(255, 249, 222, 0.98) 24%,
     rgba(255, 235, 175, 0.62) 52%,
@@ -113,7 +137,7 @@ function updateLight({ x, y, visible }) {
   );
   background-clip: text;
   -webkit-background-clip: text;
-  opacity: var(--light-opacity);
+  opacity: calc(var(--light-opacity, 0) * var(--intro-glow, 1));
   filter: drop-shadow(0 0 5px rgba(255, 249, 219, 0.92));
 }
 
