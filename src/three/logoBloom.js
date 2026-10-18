@@ -10,9 +10,12 @@ export function createLogoBloom(renderer, scene, camera) {
   const composer = new EffectComposer(renderer)
   const renderPass = new RenderPass(scene, camera)
   const original = new SavePass()
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.72, 0.28, 0.9)
-  // 限制大尺度模糊的权重，避免星心四周出现整片白雾。
-  bloom.compositeMaterial.uniforms.bloomFactors.value = [1, 0.42, 0.08, 0, 0]
+  // UnrealBloomPass 的 radius 会把每个 mip 权重与 1.2-f 混合：radius 大于 0 时，写 0 的 mip
+  // 仍会以 1.2*radius 参与合成，最宽的模糊层铺满画布就会在画布边缘留下方形底雾。
+  // 因此 radius 取 0，让 bloomFactors 按字面生效。
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.8, 0, 0.9)
+  // 前四项沿用原 radius=0.28 下 [1, 0.42, 0.08, 0, 0] 的等效权重以保持观感，只关掉最宽的 mip4。
+  bloom.compositeMaterial.uniforms.bloomFactors.value = [0.78, 0.52, 0.37, 0.34, 0]
 
   const output = new ShaderPass({
     uniforms: {
