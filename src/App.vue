@@ -35,9 +35,6 @@ function updateLight({ x, y, visible }) {
         <span ref="wordmarkLightRef" class="brand-wordmark__text brand-wordmark__glow" aria-hidden="true">元星联邦</span>
       </div>
       <LogoHero ref="logoHeroRef" @light-update="updateLight" />
-      <div class="caption">
-        <p class="subtitle">METASTELLAR · FEDERATION</p>
-      </div>
     </section>
   </main>
 </template>
@@ -77,7 +74,7 @@ function updateLight({ x, y, visible }) {
   /* 字形下缘会伸出 1em 行盒，留出上下内边距，避免 background-clip: text 把它裁掉 */
   --wordmark-bleed: 0.15em;
   position: absolute;
-  top: 84%;
+  top: 88%;
   left: 50%;
   margin: 0;
   transform: translate(-50%, -56%);
@@ -118,21 +115,6 @@ function updateLight({ x, y, visible }) {
   -webkit-background-clip: text;
   opacity: var(--light-opacity);
   filter: drop-shadow(0 0 5px rgba(255, 249, 219, 0.92));
-}
-
-.caption {
-  text-align: center;
-  margin-top: -8px;
-}
-
-.subtitle {
-  margin: 10px 0 0;
-  font-size: clamp(0.72rem, 1.4vw, 0.92rem);
-  font-weight: 500;
-  letter-spacing: 0.42em;
-  padding-left: 0.42em;
-  color: var(--accent-bright);
-  opacity: 0.85;
 }
 
 @media (max-width: 640px) {
