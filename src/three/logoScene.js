@@ -171,7 +171,7 @@ export function createLogoScene(canvas, { animate = true, view = 'front', onLigh
   // 开场动画状态：由外部时间轴（Anime.js）直接改写，渲染循环每帧读取并应用
   const intro = {
     starReveal: -0.2,
-    ringReveal: 0.25,
+    ringReveal: 0,
     star: 0,
     ribbon: 0,
     glow: 0,

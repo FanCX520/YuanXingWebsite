@@ -140,8 +140,9 @@ const ribbonFragmentShader = /* glsl */ `
     vec3 toStar = normalize(uStarLightPosition - vWorldPosition);
     float lightFacing = max(dot(normal, toStar), 0.0);
     color += uStarLightColor * starLight * lightFacing * (0.025 + galaxyBand * 0.06);
-    // 开场：光波从星心扫过环带，uReveal 为当前波前半径
-    float ringWave = 1.0 - smoothstep(uReveal - 0.5, uReveal, length(vLocalPosition.xy));
+    // 开场：光从环带中段（最接近星心处）向两端扩散，uReveal 为当前扩散半程
+    float ringSpan = abs(vUv.x - 0.5) * 2.0;
+    float ringWave = 1.0 - smoothstep(uReveal - 0.22, uReveal, ringSpan);
     color *= uIntro * mix(0.03, 1.0, ringWave);
     gl_FragColor = vec4(color, 1.0);
   }

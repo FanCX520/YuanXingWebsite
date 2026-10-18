@@ -10,7 +10,7 @@ const FREEZE_SECONDS = INTRO_PARAM?.startsWith('freeze-') ? Number(INTRO_PARAM.s
 // 场景侧：星核扩散半径 / 环带光波半径 / 星体与环带亮度 / 光晕 / 点光源 / 泛光 / 交互动效强度
 const SCENE_START = {
   starReveal: -0.2,
-  ringReveal: 0.25,
+  ringReveal: 0,
   star: 0,
   ribbon: 0,
   glow: 0,
@@ -21,7 +21,7 @@ const SCENE_START = {
 
 const SCENE_END = {
   starReveal: 1.7,
-  ringReveal: 1.7,
+  ringReveal: 1.25,
   star: 1,
   ribbon: 1,
   glow: 1,
@@ -117,7 +117,7 @@ export function initIntro({ scene }) {
     .add(scene.intro, { glow: 1, duration: 1000, ease: 'outQuad' }, 180)
     .add(scene.intro, { bloom: 1, duration: 1300, ease: 'outQuad' }, 220)
     .add(scene.intro, { light: 1, duration: 1500, ease: 'inOutSine' }, 500)
-    .add(scene.intro, { ringReveal: 1.7, duration: 1200, ease: 'outCubic' }, 1250)
+    .add(scene.intro, { ringReveal: 1.25, duration: 1400, ease: 'outCubic' }, 1150)
     .add(scene.intro, { ribbon: 1, duration: 1300, ease: 'inOutSine' }, 1200)
 
   // ④ 光从字标中间上方展开，把字标由暗到亮照亮（3.3s 前完成）
