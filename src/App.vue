@@ -85,7 +85,7 @@ function updateLight({ x, y, visible }) {
   /* 字形下缘会伸出 1em 行盒，留出上下内边距，避免 background-clip: text 把它裁掉 */
   --wordmark-bleed: 0.15em;
   position: absolute;
-  top: 91%;
+  top: 92.5%;
   left: 50%;
   margin: 0;
   transform: translate(-50%, -56%);

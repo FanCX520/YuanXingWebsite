@@ -166,6 +166,9 @@ export function createLogoScene(canvas, { animate = true, view = 'front', onLigh
     root.add(ribbon)
   }
   scene.add(root)
+  // 星标模型整体缩放（略大于 1 让徽章在画面中更饱满）
+  const MODEL_SCALE = 1.06
+  root.scale.setScalar(MODEL_SCALE)
   const bloom = createLogoBloom(renderer, scene, camera)
 
   // 开场动画状态：由外部时间轴（Anime.js）直接改写，渲染循环每帧读取并应用
