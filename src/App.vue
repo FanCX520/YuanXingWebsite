@@ -90,7 +90,9 @@ function updateLight({ x, y, visible }) {
   margin: 0;
   transform: translate(-50%, -56%);
   white-space: nowrap;
-  font-size: clamp(3.4rem, 11vw, 8.2rem);
+  /* 字号与星标同比例缩放：星标封顶后字号也封顶（桌面窗口变宽不再变大），
+     仅在窄屏 / 矮窗口下随星标一起缩小，保持字标与星标的比例不变 */
+  font-size: min(8.2rem, 14.39vw, 15.24vh);
   font-weight: 700;
   letter-spacing: 0.18em;
   line-height: 1;
@@ -143,7 +145,6 @@ function updateLight({ x, y, visible }) {
 
 @media (max-width: 640px) {
   .brand-wordmark__text {
-    font-size: clamp(2.8rem, 13vw, 5rem);
     letter-spacing: 0.12em;
     padding-left: 0.12em;
   }
