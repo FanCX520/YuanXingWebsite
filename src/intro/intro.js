@@ -120,18 +120,18 @@ export function initIntro({ scene }) {
     .add(scene.intro, { ringReveal: 1.7, duration: 1200, ease: 'outCubic' }, 1250)
     .add(scene.intro, { ribbon: 1, duration: 1300, ease: 'inOutSine' }, 1200)
 
-  // ④ 光从字标中间上方展开，把字标由暗到亮照亮
+  // ④ 光从字标中间上方展开，把字标由暗到亮照亮（3.3s 前完成）
   timeline
-    .add(document.documentElement, { '--intro-reveal': 1, duration: 1500, ease: 'outCubic' }, 2000)
-    .add(document.documentElement, { '--intro-glow': 1, duration: 950, ease: 'outCubic' }, 2050)
-    .add(document.documentElement, { '--intro-shift': 0, duration: 900, ease: 'inOutSine' }, 2050)
-    .add(document.documentElement, { '--intro-spread': 1, duration: 1400, ease: 'inOutSine' }, 2050)
-    .add(document.documentElement, { '--intro-wordmark': 1, duration: 1400, ease: 'inOutSine' }, 2100)
+    .add(document.documentElement, { '--intro-reveal': 1, duration: 1250, ease: 'outCubic' }, 1950)
+    .add(document.documentElement, { '--intro-glow': 1, duration: 900, ease: 'outCubic' }, 2000)
+    .add(document.documentElement, { '--intro-shift': 0, duration: 850, ease: 'inOutSine' }, 2000)
+    .add(document.documentElement, { '--intro-spread': 1, duration: 1200, ease: 'inOutSine' }, 2000)
+    .add(document.documentElement, { '--intro-wordmark': 1, duration: 1250, ease: 'inOutSine' }, 2050)
 
-  // ⑤ 背景浮现 + ⑥ 交互动效接管
+  // ⑤ 等字标完全亮起后再浮现背景（3.5s 开始，不与字标重叠）
   timeline
-    .add(document.documentElement, { '--intro-backdrop': 1, duration: 1400, ease: 'inOutSine' }, 3200)
-    .add(scene.intro, { motion: 1, duration: 1100, ease: 'inOutSine' }, 3700)
+    .add(document.documentElement, { '--intro-backdrop': 1, duration: 1300, ease: 'inOutSine' }, 3500)
+    .add(scene.intro, { motion: 1, duration: 1100, ease: 'inOutSine' }, 3800)
 
   window.addEventListener('pointerdown', skip)
   window.addEventListener('keydown', skip)
