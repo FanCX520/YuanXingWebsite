@@ -38,7 +38,7 @@ body {
   :root {
     --intro-wordmark: 1;
     --intro-glow: 1;
-    --intro-spread: 1;
+    --intro-spread: 1.25;
     --intro-shift: 0;
     --intro-reveal: 1;
     --intro-backdrop: 1;

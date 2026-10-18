@@ -85,14 +85,15 @@ function updateLight({ x, y, visible }) {
   /* 字形下缘会伸出 1em 行盒，留出上下内边距，避免 background-clip: text 把它裁掉 */
   --wordmark-bleed: 0.15em;
   position: absolute;
-  top: 88%;
+  top: 91%;
   left: 50%;
   margin: 0;
   transform: translate(-50%, -56%);
   white-space: nowrap;
-  /* 字号与星标同比例缩放：星标封顶后字号也封顶（桌面窗口变宽不再变大），
-     仅在窄屏 / 矮窗口下随星标一起缩小，保持字标与星标的比例不变 */
-  font-size: min(8.2rem, 14.39vw, 15.24vh);
+  /* 字号 = 星标实际尺寸（min(68vw, 620px, 72vh)）的固定倍数：
+     星标封顶时字号也封顶，窗口变宽不再变大；窄屏/矮窗口下与星标一起缩小 */
+  --wordmark-scale: 0.195;
+  font-size: calc(min(68vw, 620px, 72vh) * var(--wordmark-scale));
   font-weight: 700;
   letter-spacing: 0.18em;
   line-height: 1;
@@ -133,8 +134,8 @@ function updateLight({ x, y, visible }) {
     ellipse calc(34% * var(--intro-spread, 1)) calc(2.2em * var(--intro-spread, 1))
       at var(--light-x) calc(var(--light-y) + var(--intro-shift, 0) * 1%),
     rgba(255, 255, 246, 1) 0%,
-    rgba(255, 249, 222, 0.98) 24%,
-    rgba(255, 235, 175, 0.62) 52%,
+    rgba(255, 249, 222, 0.98) 28%,
+    rgba(255, 235, 175, 0.62) 60%,
     rgba(255, 247, 225, 0) 100%
   );
   background-clip: text;

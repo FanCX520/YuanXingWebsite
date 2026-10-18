@@ -43,7 +43,7 @@ const CSS_START = {
 const CSS_END = {
   '--intro-wordmark': '1',
   '--intro-glow': '1',
-  '--intro-spread': '1',
+  '--intro-spread': '1.25',
   '--intro-shift': '0',
   '--intro-reveal': '1',
   '--intro-backdrop': '1'
@@ -125,7 +125,7 @@ export function initIntro({ scene }) {
     .add(document.documentElement, { '--intro-reveal': 1, duration: 1250, ease: 'outCubic' }, 1950)
     .add(document.documentElement, { '--intro-glow': 1, duration: 900, ease: 'outCubic' }, 2000)
     .add(document.documentElement, { '--intro-shift': 0, duration: 850, ease: 'inOutSine' }, 2000)
-    .add(document.documentElement, { '--intro-spread': 1, duration: 1200, ease: 'inOutSine' }, 2000)
+    .add(document.documentElement, { '--intro-spread': 1.25, duration: 1200, ease: 'inOutSine' }, 2000)
     .add(document.documentElement, { '--intro-wordmark': 1, duration: 1250, ease: 'inOutSine' }, 2050)
 
   // ⑤ 背景与字标同步亮起，最后交给交互
