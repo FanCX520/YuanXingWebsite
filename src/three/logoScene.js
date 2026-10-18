@@ -1,6 +1,9 @@
 import * as THREE from 'three'
 import { createSparkleOctagramGeometry } from './starGeometry.js'
-import { createOrbitBandGeometry } from './orbitGeometry.js'
+import { createRibbonGeometry } from './ribbonGeometry.js'
+import { createLogoOrbitProfiles } from './logoOrbitProfiles.js'
+import { createCosmicMaterials } from './cosmicMaterials.js'
+import { createLogoBloom } from './logoBloom.js'
 
 // 星体外观：哑光深蓝，体积交给模型本身，材质只做基础塑形
 const STAR_MATERIAL = {
@@ -28,42 +31,12 @@ const VERTICAL_STAR = { ...NEEDLE, radiusX: 0.2, radiusY: 1.12 }
 const HORIZONTAL_STAR = { ...NEEDLE, radiusX: 0.2, radiusY: 1.02 }
 const DIAGONAL_STAR = { ...NEEDLE, radiusX: 0.14, radiusY: 0.62 }
 const OCTAGRAM = {
-  halfThickness: 0.2243,
+  halfThickness: 0.17,
   edgeStart: 0.88,
   edgeThicknessRatio: 0.12,
   radialSegments: 512,
   rings: 96
 }
-const ORBITS = [
-  {
-    semiMajor: 1.28,
-    semiMinor: 1.28,
-    roll: 0,
-    tilt: 1.05,
-    tiltY: 0.12,
-    planeRoll: 0.55,
-    centerX: 0,
-    centerY: 0,
-    depthOffset: 0.02,
-    thickness: 0.045,
-    taperStart: 0.02,
-    taperEnd: 0.48
-  },
-  {
-    semiMajor: 1.15,
-    semiMinor: 1.15,
-    roll: 0,
-    tilt: -1.05,
-    tiltY: -0.12,
-    planeRoll: -0.55,
-    centerX: 0,
-    centerY: 0,
-    depthOffset: -0.02,
-    thickness: 0.04,
-    taperStart: 0.02,
-    taperEnd: 0.48
-  }
-]
 
 // 八角轮廓由长针主星与 45° 短针星取并集，前后共用同一厚度场
 function buildStarEmblem(material) {
@@ -143,7 +116,7 @@ function buildLights(scene) {
   scene.add(fill)
 }
 
-export function createLogoScene(canvas) {
+export function createLogoScene(canvas, { animate = true, view = 'front', onLightUpdate } = {}) {
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: true,
@@ -154,42 +127,46 @@ export function createLogoScene(canvas) {
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.1
+  renderer.setClearColor(0x000000, 0)
 
   const scene = new THREE.Scene()
   const environment = createStudioEnvironment(renderer)
   scene.environment = environment
 
-  const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50)
-  // 相机接近水平：水平视角下轮廓呈 + 星，体积由光影与俯仰揭示
-  camera.position.set(0, 0.15, 4.6)
+  const camera = new THREE.OrthographicCamera(-1.35, 1.35, 1.35, -1.35, 0.1, 50)
+  const isSideView = view === 'side'
+  camera.position.set(isSideView ? 5 : 0, isSideView ? 0.05 : 0, isSideView ? 0 : 5)
+  camera.up.set(0, 1, 0)
+  camera.lookAt(0, 0, 0)
 
   buildLights(scene)
 
-  const starMaterial = new THREE.MeshPhysicalMaterial({
-    color: STAR_MATERIAL.color,
-    metalness: STAR_MATERIAL.metalness,
-    roughness: STAR_MATERIAL.roughness,
-    clearcoat: STAR_MATERIAL.clearcoat,
-    clearcoatRoughness: STAR_MATERIAL.clearcoatRoughness,
-    emissive: new THREE.Color(STAR_MATERIAL.emissive),
-    emissiveIntensity: STAR_MATERIAL.emissiveIntensity,
-    envMapIntensity: STAR_MATERIAL.envMapIntensity
-  })
-  const orbitMaterial = starMaterial.clone()
-  orbitMaterial.color.set(0x0d1830)
-  orbitMaterial.metalness = 0.52
-  orbitMaterial.roughness = 0.34
-  orbitMaterial.clearcoat = 0.22
-  orbitMaterial.clearcoatRoughness = 0.45
-  orbitMaterial.emissiveIntensity = 0.05
-  orbitMaterial.envMapIntensity = 0.82
+  const cosmicMaterials = createCosmicMaterials()
+  const starMaterial = cosmicMaterials.star
+  const orbitMaterial = cosmicMaterials.ribbon
 
   const root = new THREE.Group()
-  root.add(buildStarEmblem(starMaterial))
-  for (const orbit of ORBITS) {
-    root.add(new THREE.Mesh(createOrbitBandGeometry(orbit), orbitMaterial))
+  root.name = 'LogoRoot'
+  const starLight = new THREE.PointLight(0xfff4d6, 1.5, 3.4, 2)
+  starLight.name = 'StarLight'
+  starLight.position.set(0, 0, 0.18)
+  root.add(starLight)
+  const star = buildStarEmblem(starMaterial)
+  star.name = 'StarEmblem'
+  const starGlow = new THREE.Mesh(star.geometry.clone(), cosmicMaterials.starGlow)
+  starGlow.name = 'StarGlow'
+  starGlow.scale.setScalar(1.028)
+  root.add(starGlow)
+  root.add(star)
+  const parts = { star }
+  for (const orbit of createLogoOrbitProfiles()) {
+    const ribbon = new THREE.Mesh(createRibbonGeometry(orbit), orbitMaterial)
+    ribbon.name = orbit.name
+    parts[orbit.name] = ribbon
+    root.add(ribbon)
   }
   scene.add(root)
+  const bloom = createLogoBloom(renderer, scene, camera)
 
   const pointer = { x: 0, y: 0 }
   const targetTilt = { x: 0, y: 0 }
@@ -197,26 +174,38 @@ export function createLogoScene(canvas) {
   let frameId = 0
   let elapsed = 0
   let lastTime = performance.now()
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+  const starLightWorldPosition = new THREE.Vector3()
+  const starLightScreenPosition = new THREE.Vector3()
 
   function resize() {
     const width = canvas.clientWidth || canvas.parentElement?.clientWidth || 1
     const height = canvas.clientHeight || canvas.parentElement?.clientHeight || 1
     renderer.setSize(width, height, false)
-    camera.aspect = width / height
+    bloom.resize(width, height)
+    const aspect = width / height
+    const halfHeight = 1.35 / Math.min(aspect, 1)
+    camera.left = -halfHeight * aspect
+    camera.right = halfHeight * aspect
+    camera.top = halfHeight
+    camera.bottom = -halfHeight
     camera.updateProjectionMatrix()
+    bloom.render()
   }
 
   function onPointerMove(event) {
     const rect = canvas.getBoundingClientRect()
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
     pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1)
-    targetTilt.y = pointer.x * 0.3
-    targetTilt.x = pointer.y * 0.2
+    targetTilt.y = pointer.x * 0.1
+    targetTilt.x = pointer.y * 0.08
   }
 
   function onPointerLeave() {
     targetTilt.x = 0
     targetTilt.y = 0
+    pointer.x = 0
+    pointer.y = 0
   }
 
   function tick() {
@@ -225,21 +214,36 @@ export function createLogoScene(canvas) {
     lastTime = now
     elapsed += delta
 
-    // 旋转体绕垂直轴对称，体积靠俯仰角度展示；鼠标位置叠加微倾
-    const sway = Math.sin(elapsed * 0.28) * 0.12
-    const pitch = Math.sin(elapsed * 0.24) * 0.18
-    currentTilt.x = THREE.MathUtils.lerp(currentTilt.x, targetTilt.x + pitch, 0.05)
-    currentTilt.y = THREE.MathUtils.lerp(currentTilt.y, targetTilt.y + sway, 0.05)
+    // 固定正视相机，小幅转动整个徽章，保留原图交汇点与主轮廓。
+    const motion = animate && !isSideView && !reducedMotion.matches
+    const sway = motion ? Math.sin(elapsed * 0.28) * 0.012 : 0
+    const pitch = motion ? Math.sin(elapsed * 0.24) * 0.015 : 0
+    const damping = 1 - Math.exp(-8 * delta)
+    currentTilt.x = THREE.MathUtils.lerp(currentTilt.x, motion ? targetTilt.x + pitch : 0, damping)
+    currentTilt.y = THREE.MathUtils.lerp(currentTilt.y, motion ? targetTilt.y + sway : 0, damping)
 
     root.rotation.x = currentTilt.x
     root.rotation.y = currentTilt.y
-    root.position.y = Math.sin(elapsed * 0.45) * 0.035
+    root.position.y = motion ? Math.sin(elapsed * 0.45) * 0.008 : 0
+    root.updateMatrixWorld()
+    starLight.getWorldPosition(starLightWorldPosition)
+    starLightScreenPosition.copy(starLightWorldPosition).project(camera)
+    onLightUpdate?.({
+      x: THREE.MathUtils.clamp((starLightScreenPosition.x * 0.5 + 0.5) * 100, 0, 100),
+      y: THREE.MathUtils.clamp((1 - (starLightScreenPosition.y * 0.5 + 0.5)) * 100, 0, 100),
+      visible: starLightScreenPosition.z > -1 && starLightScreenPosition.z < 1
+    })
 
-    camera.position.x = THREE.MathUtils.lerp(camera.position.x, pointer.x * 0.3, 0.04)
-    camera.position.y = THREE.MathUtils.lerp(camera.position.y, 0.15 + pointer.y * 0.2, 0.04)
-    camera.lookAt(0, 0, 0)
+    cosmicMaterials.star.uniforms.uTime.value = motion ? elapsed : 0
+    cosmicMaterials.ribbon.uniforms.uTime.value = motion ? elapsed : 0
+    cosmicMaterials.starGlow.uniforms.uTime.value = motion ? elapsed : 0
+    cosmicMaterials.ribbon.uniforms.uStarLightPosition.value.copy(starLightWorldPosition)
+    cosmicMaterials.ribbon.uniforms.uStarLightColor.value.copy(starLight.color)
+    cosmicMaterials.ribbon.uniforms.uStarLightPower.value = starLight.intensity
+    cosmicMaterials.ribbon.uniforms.uStarLightRange.value = starLight.distance
+    cosmicMaterials.ribbon.uniforms.uStarLightDecay.value = starLight.decay
 
-    renderer.render(scene, camera)
+    bloom.render()
     frameId = requestAnimationFrame(tick)
   }
 
@@ -251,6 +255,8 @@ export function createLogoScene(canvas) {
   tick()
 
   return {
+    root,
+    parts,
     destroy() {
       cancelAnimationFrame(frameId)
       ro.disconnect()
@@ -262,8 +268,10 @@ export function createLogoScene(canvas) {
         if (object.isMesh && object.geometry) geometries.add(object.geometry)
       })
       geometries.forEach((geometry) => geometry.dispose())
-      starMaterial.dispose()
-      orbitMaterial.dispose()
+      cosmicMaterials.star.dispose()
+      cosmicMaterials.ribbon.dispose()
+      cosmicMaterials.starGlow.dispose()
+      bloom.dispose()
       environment.dispose()
       renderer.dispose()
     }

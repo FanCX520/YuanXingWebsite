@@ -2,12 +2,18 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { createLogoScene } from '../three/logoScene.js'
 
+const emit = defineEmits(['light-update'])
 const canvasRef = ref(null)
 let sceneHandle = null
 
 onMounted(() => {
   if (!canvasRef.value) return
-  sceneHandle = createLogoScene(canvasRef.value)
+  const params = new URLSearchParams(window.location.search)
+  sceneHandle = createLogoScene(canvasRef.value, {
+    view: params.get('view') || 'front',
+    animate: params.get('motion') !== 'off',
+    onLightUpdate: (state) => emit('light-update', state)
+  })
 })
 
 onBeforeUnmount(() => {
@@ -25,9 +31,10 @@ onBeforeUnmount(() => {
 <style scoped>
 .logo-hero {
   position: relative;
-  width: min(100vw, 900px);
-  height: min(100vw, 900px);
-  max-height: 92vh;
+  z-index: 1;
+  width: min(68vw, 620px);
+  height: min(68vw, 620px);
+  max-height: 72vh;
   margin: 0 auto;
 }
 
