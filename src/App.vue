@@ -74,6 +74,8 @@ function updateLight({ x, y, visible }) {
 }
 
 .brand-wordmark__text {
+  /* 字形下缘会伸出 1em 行盒，留出上下内边距，避免 background-clip: text 把它裁掉 */
+  --wordmark-bleed: 0.15em;
   position: absolute;
   top: 84%;
   left: 50%;
@@ -83,17 +85,19 @@ function updateLight({ x, y, visible }) {
   font-size: clamp(3.4rem, 11vw, 8.2rem);
   font-weight: 700;
   letter-spacing: 0.18em;
-  padding-left: 0.18em;
   line-height: 1;
+  padding-block: var(--wordmark-bleed);
+  padding-left: 0.18em;
 }
 
 .brand-wordmark__base {
   color: transparent;
+  /* 色标用 em 锚回 1em 行盒：内边距只把渐变盒撑高，不改变渐变在字形上的分布 */
   background: linear-gradient(
     180deg,
-    rgba(206, 220, 255, 0.96) 0%,
-    rgba(139, 165, 222, 0.94) 44%,
-    rgba(66, 88, 145, 0.96) 100%
+    rgba(206, 220, 255, 0.96) var(--wordmark-bleed),
+    rgba(139, 165, 222, 0.94) calc(var(--wordmark-bleed) + 0.44em),
+    rgba(66, 88, 145, 0.96) calc(var(--wordmark-bleed) + 1em)
   );
   background-clip: text;
   -webkit-background-clip: text;
@@ -102,8 +106,9 @@ function updateLight({ x, y, visible }) {
 
 .brand-wordmark__glow {
   color: transparent;
+  /* 原 220% 是相对 1em 行盒的 2.2em，改用 em 固定纵向光斑，不受内边距影响 */
   background: radial-gradient(
-    ellipse 34% 220% at var(--light-x) var(--light-y),
+    ellipse 34% 2.2em at var(--light-x) var(--light-y),
     rgba(255, 255, 246, 1) 0%,
     rgba(255, 249, 222, 0.98) 24%,
     rgba(255, 235, 175, 0.62) 52%,
