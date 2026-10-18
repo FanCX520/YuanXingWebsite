@@ -128,10 +128,10 @@ export function initIntro({ scene }) {
     .add(document.documentElement, { '--intro-spread': 1, duration: 1200, ease: 'inOutSine' }, 2000)
     .add(document.documentElement, { '--intro-wordmark': 1, duration: 1250, ease: 'inOutSine' }, 2050)
 
-  // ⑤ 等字标完全亮起后再浮现背景（3.5s 开始，不与字标重叠）
+  // ⑤ 背景与字标同步亮起，最后交给交互
   timeline
-    .add(document.documentElement, { '--intro-backdrop': 1, duration: 1300, ease: 'inOutSine' }, 3500)
-    .add(scene.intro, { motion: 1, duration: 1100, ease: 'inOutSine' }, 3800)
+    .add(document.documentElement, { '--intro-backdrop': 1, duration: 1350, ease: 'inOutSine' }, 1950)
+    .add(scene.intro, { motion: 1, duration: 1100, ease: 'inOutSine' }, 3500)
 
   window.addEventListener('pointerdown', skip)
   window.addEventListener('keydown', skip)
