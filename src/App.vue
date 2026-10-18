@@ -4,11 +4,25 @@ import LogoHero from './components/LogoHero.vue'
 import SpaceBackdrop from './components/SpaceBackdrop.vue'
 
 const brandWordmarkRef = ref(null)
+const wordmarkLightRef = ref(null)
+const logoHeroRef = ref(null)
 
-function updateLight({ x, y }) {
-  if (!brandWordmarkRef.value) return
-  brandWordmarkRef.value.style.setProperty('--light-x', `${x}%`)
-  brandWordmarkRef.value.style.setProperty('--light-y', `${y}%`)
+function updateLight({ x, y, visible }) {
+  const wordmark = brandWordmarkRef.value
+  const text = wordmarkLightRef.value
+  const logo = logoHeroRef.value?.$el
+  if (!wordmark || !text || !logo) return
+
+  const logoBounds = logo.getBoundingClientRect()
+  const textBounds = text.getBoundingClientRect()
+  if (!textBounds.width || !textBounds.height) return
+
+  // 将模型画布中的光源投影换算到字形坐标，保留真实的上下距离。
+  const lightX = logoBounds.left + logoBounds.width * x / 100
+  const lightY = logoBounds.top + logoBounds.height * y / 100
+  wordmark.style.setProperty('--light-x', `${(lightX - textBounds.left) / textBounds.width * 100}%`)
+  wordmark.style.setProperty('--light-y', `${(lightY - textBounds.top) / textBounds.height * 100}%`)
+  wordmark.style.setProperty('--light-opacity', visible === false ? '0' : '1')
 }
 </script>
 
@@ -18,9 +32,9 @@ function updateLight({ x, y }) {
     <section class="hero">
       <div ref="brandWordmarkRef" class="brand-wordmark">
         <h1 class="brand-wordmark__text brand-wordmark__base">元星联邦</h1>
-        <span class="brand-wordmark__text brand-wordmark__glow" aria-hidden="true">元星联邦</span>
+        <span ref="wordmarkLightRef" class="brand-wordmark__text brand-wordmark__glow" aria-hidden="true">元星联邦</span>
       </div>
-      <LogoHero @light-update="updateLight" />
+      <LogoHero ref="logoHeroRef" @light-update="updateLight" />
       <div class="caption">
         <p class="subtitle">METASTELLAR · FEDERATION</p>
       </div>
@@ -51,7 +65,8 @@ function updateLight({ x, y }) {
 
 .brand-wordmark {
   --light-x: 50%;
-  --light-y: 50%;
+  --light-y: -140%;
+  --light-opacity: 0;
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -60,7 +75,7 @@ function updateLight({ x, y }) {
 
 .brand-wordmark__text {
   position: absolute;
-  top: 50%;
+  top: 84%;
   left: 50%;
   margin: 0;
   transform: translate(-50%, -56%);
@@ -73,18 +88,31 @@ function updateLight({ x, y }) {
 }
 
 .brand-wordmark__base {
-  color: rgba(45, 62, 112, 0.5);
-  text-shadow: 0 0 18px rgba(20, 44, 120, 0.2);
+  color: transparent;
+  background: linear-gradient(
+    180deg,
+    rgba(206, 220, 255, 0.96) 0%,
+    rgba(139, 165, 222, 0.94) 44%,
+    rgba(66, 88, 145, 0.96) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  text-shadow: 0 0 16px rgba(20, 44, 120, 0.34);
 }
 
 .brand-wordmark__glow {
-  color: rgba(255, 245, 214, 0.9);
-  clip-path: circle(14% at var(--light-x) var(--light-y));
-  filter: blur(0.4px);
-  text-shadow:
-    0 0 5px rgba(255, 248, 224, 0.9),
-    0 0 18px rgba(255, 244, 205, 0.62),
-    0 0 34px rgba(180, 207, 255, 0.28);
+  color: transparent;
+  background: radial-gradient(
+    ellipse 34% 220% at var(--light-x) var(--light-y),
+    rgba(255, 255, 246, 1) 0%,
+    rgba(255, 249, 222, 0.98) 24%,
+    rgba(255, 235, 175, 0.62) 52%,
+    rgba(255, 247, 225, 0) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  opacity: var(--light-opacity);
+  filter: drop-shadow(0 0 5px rgba(255, 249, 219, 0.92));
 }
 
 .caption {
