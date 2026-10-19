@@ -2,7 +2,6 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import LogoHero from './components/LogoHero.vue'
 import SpaceBackdrop from './components/SpaceBackdrop.vue'
-import WordmarkLens from './components/WordmarkLens.vue'
 import { initIntro, updateIntroEngine } from './intro/intro.js'
 
 const brandWordmarkRef = ref(null)
@@ -47,7 +46,6 @@ function updateLight({ x, y, visible }) {
         <span ref="wordmarkLightRef" class="brand-wordmark__text brand-wordmark__glow" aria-hidden="true">元星联邦</span>
       </div>
       <LogoHero ref="logoHeroRef" :on-frame="updateIntroEngine" @light-update="updateLight" />
-      <WordmarkLens />
     </section>
   </main>
 </template>

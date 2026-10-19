@@ -53,11 +53,6 @@ const SAFETY_TIMEOUT = 9000
 
 const rootStyle = document.documentElement.style
 
-// 开屏结束后才允许字标上的悬停镜头等交互动效
-function markIntroDone() {
-  document.documentElement.classList.add('intro-done')
-}
-
 function writeCss(values) {
   Object.entries(values).forEach(([name, value]) => rootStyle.setProperty(name, value))
 }
@@ -77,7 +72,6 @@ export function applyIntroFallback() {
 }
 
 export function initIntro({ scene }) {
-  document.documentElement.classList.remove('intro-done')
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const disabled = INTRO_PARAM === 'off' || reduced
 
@@ -85,7 +79,6 @@ export function initIntro({ scene }) {
   if (!scene || disabled) {
     if (scene) applyScene(scene, SCENE_END)
     writeCss(CSS_END)
-    markIntroDone()
     return { skip() {}, dispose() {} }
   }
 
@@ -106,7 +99,6 @@ export function initIntro({ scene }) {
     finished = true
     applyScene(scene, SCENE_END)
     writeCss(CSS_END)
-    markIntroDone()
     cleanup()
   }
 
