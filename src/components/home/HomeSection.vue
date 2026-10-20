@@ -29,6 +29,7 @@ const { target, ready, revealed } = useSectionReveal()
 
 <style scoped>
 .home-section {
+  padding-inline: var(--page-inline);
   scroll-margin-top: 88px;
 }
 

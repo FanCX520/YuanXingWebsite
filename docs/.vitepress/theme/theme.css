@@ -150,6 +150,7 @@ body {
 }
 
 .page-content {
+  --page-inline: clamp(20px, 5vw, 68px);
   position: relative;
   z-index: 1;
   width: min(1020px, calc(100% - 32px));
@@ -165,7 +166,7 @@ body {
 .page-content h2 {
   scroll-margin-top: 88px;
   margin: 0;
-  padding: 84px clamp(20px, 5vw, 68px) 20px;
+  padding: 84px 0 20px;
   color: #f0f4ff;
   font-size: clamp(1.7rem, 4vw, 3.1rem);
 }
