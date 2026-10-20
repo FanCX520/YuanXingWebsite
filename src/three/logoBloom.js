@@ -22,7 +22,7 @@ export function createLogoBloom(renderer, scene, camera) {
   const output = new ShaderPass({
     uniforms: {
       tDiffuse: { value: null },
-      tOriginal: { value: original.renderTarget.texture }
+      tOriginal: { value: null }
     },
     vertexShader: /* glsl */ `
       varying vec2 vUv;
@@ -51,6 +51,7 @@ export function createLogoBloom(renderer, scene, camera) {
       }
     `
   })
+  output.uniforms.tOriginal.value = original.renderTarget.texture
   output.material.depthTest = false
   output.material.depthWrite = false
   composer.addPass(renderPass)

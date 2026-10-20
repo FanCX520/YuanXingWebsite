@@ -3,21 +3,32 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { createLogoScene } from '../three/logoScene.js'
 
 const props = defineProps({
-  onFrame: { type: Function, default: null }
+  onFrame: { type: Function, default: null },
+  getLogoTarget: { type: Function, default: null },
+  getNavigationTargets: { type: Function, default: null },
+  getNavigationProgress: { type: Function, default: null }
 })
-const emit = defineEmits(['light-update'])
+const emit = defineEmits(['light-update', 'scene-ready', 'scene-error'])
 const canvasRef = ref(null)
 let sceneHandle = null
 
 onMounted(() => {
   if (!canvasRef.value) return
   const params = new URLSearchParams(window.location.search)
-  sceneHandle = createLogoScene(canvasRef.value, {
-    view: params.get('view') || 'front',
-    animate: params.get('motion') !== 'off',
-    onLightUpdate: (state) => emit('light-update', state),
-    onFrame: () => props.onFrame?.()
-  })
+  try {
+    sceneHandle = createLogoScene(canvasRef.value, {
+      view: params.get('view') || 'front',
+      animate: params.get('motion') !== 'off',
+      getLogoTarget: () => props.getLogoTarget?.() ?? null,
+      onLightUpdate: (state) => emit('light-update', state),
+      onFrame: (state) => props.onFrame?.(state),
+      getNavigationTargets: () => props.getNavigationTargets?.() ?? [],
+      getNavigationProgress: () => props.getNavigationProgress?.() ?? 0
+    })
+    emit('scene-ready')
+  } catch (error) {
+    emit('scene-error', error)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -50,7 +61,7 @@ defineExpose({
   display: block;
   width: 100%;
   height: 100%;
-  touch-action: none;
+  touch-action: pan-y;
   cursor: grab;
 }
 
