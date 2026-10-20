@@ -176,6 +176,23 @@ body {
   line-height: 1.9;
 }
 
+.home-section__markdown a {
+  color: var(--site-blue);
+  text-decoration: none;
+}
+
+.home-section__markdown a:hover,
+.home-section__markdown a:focus-visible {
+  color: #eff6ff;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.home-section__empty {
+  margin: 10px 0 0;
+  color: var(--site-muted);
+}
+
 .content-section {
   min-height: 58vh;
   padding: 8px clamp(20px, 5vw, 68px) 64px;

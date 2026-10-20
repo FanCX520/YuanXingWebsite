@@ -1,8 +1,11 @@
 <script setup>
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Content, useRoute, withBase } from 'vitepress'
+import { useRoute, withBase } from 'vitepress'
+// 直接引用 Content，避免 data loader 与 VitePress 公共入口形成循环 chunk。
+import { Content } from 'vitepress/dist/client/app/components/Content.js'
 import BrandWordmark from '../../../src/components/BrandWordmark.vue'
 import SpaceBackdrop from '../../../src/components/SpaceBackdrop.vue'
+import { data as homeSections } from '../data/home.data.js'
 
 const LogoHero = defineAsyncComponent(() => import('../../../src/components/LogoHero.vue'))
 
@@ -26,11 +29,20 @@ const brandProgress = computed(() => {
   const progress = scrollProgress.value
   return progress * progress * (3 - 2 * progress)
 })
-const sections = [
-  { id: 'about', label: '汉化组', scattered: { desktop: { x: 0.14, y: 0.36 }, mobile: { x: 0.13, y: 0.54 } } },
-  { id: 'games', label: '游戏目录', scattered: { desktop: { x: 0.84, y: 0.39 }, mobile: { x: 0.87, y: 0.54 } } },
-  { id: 'links', label: '社交链接', scattered: { desktop: { x: 0.2, y: 0.76 }, mobile: { x: 0.5, y: 0.79 } } }
-]
+const sectionPositions = {
+  about: { desktop: { x: 0.14, y: 0.36 }, mobile: { x: 0.13, y: 0.54 } },
+  games: { desktop: { x: 0.84, y: 0.39 }, mobile: { x: 0.87, y: 0.54 } },
+  links: { desktop: { x: 0.2, y: 0.76 }, mobile: { x: 0.5, y: 0.79 } }
+}
+
+const sections = [...(homeSections || [])]
+  .filter((section) => sectionPositions[section.id])
+  .sort((a, b) => (a.meta.order ?? 999) - (b.meta.order ?? 999))
+  .map((section) => ({
+    id: section.id,
+    label: section.meta.navLabel || section.meta.title || section.id,
+    scattered: sectionPositions[section.id]
+  }))
 
 const navigationTargets = computed(() => {
   const { width, height } = viewport.value

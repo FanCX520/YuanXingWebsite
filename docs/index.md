@@ -3,16 +3,33 @@ title: 元星联邦
 description: 元星联邦汉化组官网。
 ---
 
-## 汉化组介绍 {#about}
+<script setup>
+import { data as homeSections } from './.vitepress/data/home.data.js'
+import { data as games } from './.vitepress/data/games.data.js'
+import HomeAboutSection from '../src/components/home/HomeAboutSection.vue'
+import HomeGamesSection from '../src/components/home/HomeGamesSection.vue'
+import HomeLinksSection from '../src/components/home/HomeLinksSection.vue'
 
-这里将介绍元星联邦汉化组的定位、汉化方向与工作方式。正式文案待补充。
+const sectionComponents = {
+  about: HomeAboutSection,
+  games: HomeGamesSection,
+  links: HomeLinksSection
+}
 
-## 汉化游戏目录 {#games}
+const sections = [...(homeSections || [])]
+  .filter((section) => sectionComponents[section.id])
+  .sort((a, b) => (a.meta.order ?? 999) - (b.meta.order ?? 999))
 
-选择一颗星，继续探索对应作品的 Wiki。
+function sectionProps(section) {
+  return section.id === 'games'
+    ? { content: section, games: games || [] }
+    : { content: section }
+}
+</script>
 
-- [未行之途](/games/roadsyettraveled/) — 汉化进度：汉化中
-
-## 社交链接 {#links}
-
-公开社交链接将在资料确认后补充。
+<component
+  v-for="section in sections"
+  :is="sectionComponents[section.id]"
+  :key="section.id"
+  v-bind="sectionProps(section)"
+/>

@@ -1,6 +1,11 @@
 ---
+type: game
+id: roadsyettraveled
 title: 未行之途
 description: 未行之途汉化项目 Wiki。
+status: translating
+order: 10
+draft: false
 ---
 
 # 未行之途
