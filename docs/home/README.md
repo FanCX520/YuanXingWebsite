@@ -33,7 +33,36 @@ title: 示例游戏
 description: 一句话简介。
 status: translating
 order: 10
+cover: /images/games/example-game.webp
 draft: false
 ```
 
-游戏卡片会根据这些字段自动出现在首页。修改后可运行 `npm run dev` 预览，运行 `npm run build` 验证。
+`cover` 是可选的展示图，把图片放到 `docs/public/images/games/`，并填写站点绝对路径，例如 `/images/games/example-game.webp`。游戏卡片会根据这些字段自动出现在首页。修改后可运行 `npm run dev` 预览，运行 `npm run build` 验证。
+
+## 正文图片排版
+
+正文图片可以在 Markdown 图片后直接选择位置：
+
+```md
+![单独左对齐](./images/example.webp){.image-left}
+
+![居中图片](./images/example.webp){.image-center}
+
+![单独右对齐](./images/example.webp){.image-right}
+
+![全宽截图](./images/example.webp){.image-full}
+
+![左侧环绕](./images/example.webp){.image-left .image-wrap}
+
+![右侧环绕](./images/example.webp){.image-right .image-wrap}
+```
+
+- `image-left` / `image-right`：独立图片，默认最大占正文宽度的 50%，不环绕。
+- `image-center`：居中上下摆放。
+- `image-full`：占满正文宽度的上下摆放。
+- 在左/右基础上再加 `image-wrap`，才启用桌面端图文环绕：
+  - `{.image-left .image-wrap}`
+  - `{.image-right .image-wrap}`
+- 同一段落里同时放一张 `.image-left` 和一张 `.image-right`，会自动排成左右两列；用空行分开则各自独占一行。
+- 小于 680px 时环绕图自动改为全宽上下排版。
+- 首页 section 的图片使用 `/images/home/...` 这类站点绝对路径；游戏 Wiki 可以使用 `./images/...` 相对路径。
