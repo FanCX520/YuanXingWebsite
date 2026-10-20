@@ -240,6 +240,10 @@ body {
   margin: 0.5rem 0 1rem 1.5rem;
 }
 
+.page-content .image-wrap-stop {
+  clear: both;
+}
+
 /* 同一段落中的左右图自动组成两列；分开成两段时仍各自独占一行 */
 .page-content p:has(> img.image-left):has(> img.image-right) {
   display: flex;
