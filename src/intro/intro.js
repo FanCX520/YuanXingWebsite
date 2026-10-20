@@ -16,7 +16,10 @@ const SCENE_START = {
   glow: 0,
   light: 0,
   bloom: 0,
-  motion: 0
+  motion: 0,
+  nav1: 0,
+  nav2: 0,
+  nav3: 0
 }
 
 const SCENE_END = {
@@ -27,7 +30,10 @@ const SCENE_END = {
   glow: 1,
   light: 1,
   bloom: 1,
-  motion: 1
+  motion: 1,
+  nav1: 1,
+  nav2: 1,
+  nav3: 1
 }
 
 // DOM 侧：字标底色亮度 / 高光强度 / 高光扩散 / 高光中心高度 / 字标展开掩膜 / 背景浮现
@@ -37,7 +43,8 @@ const CSS_START = {
   '--intro-spread': '1.5',
   '--intro-shift': '-30',
   '--intro-reveal': '0',
-  '--intro-backdrop': '0'
+  '--intro-backdrop': '0',
+  '--intro-nav-label': '0'
 }
 
 const CSS_END = {
@@ -46,7 +53,8 @@ const CSS_END = {
   '--intro-spread': '1.25',
   '--intro-shift': '0',
   '--intro-reveal': '1',
-  '--intro-backdrop': '1'
+  '--intro-backdrop': '1',
+  '--intro-nav-label': '1'
 }
 
 const SAFETY_TIMEOUT = 9000
@@ -120,6 +128,12 @@ export function initIntro({ scene }) {
     .add(scene.intro, { ringReveal: 1.25, duration: 1400, ease: 'outCubic' }, 1150)
     .add(scene.intro, { ribbon: 1, duration: 1300, ease: 'inOutSine' }, 1200)
 
+  // 主星亮到一半后，三颗导航星依次显现；其余环带、字标和背景时间轴保持不变
+  timeline
+    .add(scene.intro, { nav1: 1, duration: 420, ease: 'outCubic' }, 900)
+    .add(scene.intro, { nav2: 1, duration: 420, ease: 'outCubic' }, 1080)
+    .add(scene.intro, { nav3: 1, duration: 420, ease: 'outCubic' }, 1260)
+
   // ④ 光从字标中间上方展开，把字标由暗到亮照亮（3.3s 前完成）
   timeline
     .add(document.documentElement, { '--intro-reveal': 1, duration: 1250, ease: 'outCubic' }, 1950)
@@ -127,6 +141,7 @@ export function initIntro({ scene }) {
     .add(document.documentElement, { '--intro-shift': 0, duration: 850, ease: 'inOutSine' }, 2000)
     .add(document.documentElement, { '--intro-spread': 1.25, duration: 1200, ease: 'inOutSine' }, 2000)
     .add(document.documentElement, { '--intro-wordmark': 1, duration: 1250, ease: 'inOutSine' }, 2050)
+    .add(document.documentElement, { '--intro-nav-label': 1, duration: 1250, ease: 'inOutSine' }, 2050)
 
   // ⑤ 背景与字标同步亮起，最后交给交互
   timeline
