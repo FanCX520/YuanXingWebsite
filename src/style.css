@@ -12,6 +12,7 @@
   --intro-shift: -30;
   --intro-reveal: 0;
   --intro-backdrop: 0;
+  --intro-nav-label: 0;
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 
@@ -42,5 +43,6 @@ body {
     --intro-shift: 0;
     --intro-reveal: 1;
     --intro-backdrop: 1;
+    --intro-nav-label: 1;
   }
 }

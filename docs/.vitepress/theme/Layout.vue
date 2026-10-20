@@ -10,7 +10,7 @@ const route = useRoute()
 const logoHeroRef = ref(null)
 const heroAnchorRef = ref(null)
 const wordmarkRef = ref(null)
-const sceneAvailable = ref(false)
+const sceneFailed = ref(false)
 const scrollProgress = ref(0)
 const viewport = ref({ width: 1440, height: 900 })
 let introModule = null
@@ -18,7 +18,10 @@ let introHandle = null
 let scrollFrame = 0
 let sceneReady = false
 
-const isHome = computed(() => route.path === '/')
+const isHome = computed(() => {
+  if (route.path === '/') return true
+  return typeof window !== 'undefined' && window.location.pathname === '/'
+})
 const brandProgress = computed(() => {
   const progress = scrollProgress.value
   return progress * progress * (3 - 2 * progress)
@@ -169,7 +172,7 @@ function startIntroIfReady() {
 
 function handleSceneReady() {
   sceneReady = true
-  sceneAvailable.value = true
+  sceneFailed.value = false
   startIntroIfReady()
 }
 
@@ -225,7 +228,7 @@ onBeforeUnmount(() => {
         :style="item.style"
         :data-section-link="item.id"
       >
-        <span class="star-navigation__fallback" :class="{ 'star-navigation__fallback--hidden': isHome && sceneAvailable }" aria-hidden="true">✦</span>
+        <span v-if="!isHome || sceneFailed" class="star-navigation__fallback" aria-hidden="true">✦</span>
         <span class="star-navigation__label">{{ item.label }}</span>
       </a>
     </nav>
@@ -241,7 +244,7 @@ onBeforeUnmount(() => {
           :get-navigation-targets="getNavigationTargets"
           @light-update="updateWordmarkLight"
           @scene-ready="handleSceneReady"
-          @scene-error="sceneAvailable = false"
+          @scene-error="sceneFailed = true"
         />
         <BrandWordmark ref="wordmarkRef" :travel-style="wordmarkStyle" />
       </section>

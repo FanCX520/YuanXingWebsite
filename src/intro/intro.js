@@ -43,7 +43,8 @@ const CSS_START = {
   '--intro-spread': '1.5',
   '--intro-shift': '-30',
   '--intro-reveal': '0',
-  '--intro-backdrop': '0'
+  '--intro-backdrop': '0',
+  '--intro-nav-label': '0'
 }
 
 const CSS_END = {
@@ -52,7 +53,8 @@ const CSS_END = {
   '--intro-spread': '1.25',
   '--intro-shift': '0',
   '--intro-reveal': '1',
-  '--intro-backdrop': '1'
+  '--intro-backdrop': '1',
+  '--intro-nav-label': '1'
 }
 
 const SAFETY_TIMEOUT = 9000
@@ -139,6 +141,7 @@ export function initIntro({ scene }) {
     .add(document.documentElement, { '--intro-shift': 0, duration: 850, ease: 'inOutSine' }, 2000)
     .add(document.documentElement, { '--intro-spread': 1.25, duration: 1200, ease: 'inOutSine' }, 2000)
     .add(document.documentElement, { '--intro-wordmark': 1, duration: 1250, ease: 'inOutSine' }, 2050)
+    .add(document.documentElement, { '--intro-nav-label': 1, duration: 1250, ease: 'inOutSine' }, 2050)
 
   // ⑤ 背景与字标同步亮起，最后交给交互
   timeline
