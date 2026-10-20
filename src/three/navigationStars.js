@@ -1,6 +1,11 @@
 import * as THREE from 'three'
 import { createSparkleOctagramGeometry } from './starGeometry.js'
 
+export const NAVIGATION_BREATH_PERIOD = 3
+export const NAVIGATION_BREATH_SPEED = (Math.PI * 2) / NAVIGATION_BREATH_PERIOD
+export const NAVIGATION_ROTATION_PERIOD = 7
+export const NAVIGATION_ROTATION_SPEED = (Math.PI * 2) / NAVIGATION_ROTATION_PERIOD
+
 const NAVIGATION_NEEDLE = {
   valleyX: 0.85,
   valleyY: 0.05,
@@ -19,7 +24,6 @@ const NAVIGATION_OCTAGRAM = {
 const NAVIGATION_VARIANTS = [
   {
     phase: 0,
-    speed: 0.045,
     tiltX: 0.16,
     tiltY: -0.12,
     scale: 1,
@@ -29,7 +33,6 @@ const NAVIGATION_VARIANTS = [
   },
   {
     phase: 1.9,
-    speed: 0.052,
     tiltX: -0.1,
     tiltY: 0.14,
     scale: 0.94,
@@ -39,7 +42,6 @@ const NAVIGATION_VARIANTS = [
   },
   {
     phase: 3.7,
-    speed: 0.048,
     tiltX: 0.12,
     tiltY: 0.1,
     scale: 0.88,
@@ -53,6 +55,7 @@ const starVertexShader = /* glsl */ `
   attribute float aPhase;
   attribute float aIntensity;
   attribute vec3 aTint;
+  attribute float aIntro;
 
   varying vec3 vLocalPosition;
   varying vec3 vNormal;
@@ -60,6 +63,7 @@ const starVertexShader = /* glsl */ `
   varying float vPhase;
   varying float vIntensity;
   varying vec3 vTint;
+  varying float vIntro;
 
   void main() {
     mat4 instance = mat4(1.0);
@@ -67,13 +71,15 @@ const starVertexShader = /* glsl */ `
       instance = instanceMatrix;
     #endif
 
-    vec4 worldPosition = modelMatrix * instance * vec4(position, 1.0);
+    float introScale = mix(0.84, 1.0, aIntro);
+    vec4 worldPosition = modelMatrix * instance * vec4(position * introScale, 1.0);
     vLocalPosition = position;
     vNormal = normalize(mat3(modelMatrix) * mat3(instance) * normal);
     vViewDirection = normalize(cameraPosition - worldPosition.xyz);
     vPhase = aPhase;
     vIntensity = aIntensity;
     vTint = aTint;
+    vIntro = aIntro;
     gl_Position = projectionMatrix * viewMatrix * worldPosition;
   }
 `
@@ -89,6 +95,7 @@ const starFragmentShader = /* glsl */ `
   varying float vPhase;
   varying float vIntensity;
   varying vec3 vTint;
+  varying float vIntro;
 
   float hash(vec3 p) {
     p = fract(p * 0.1031);
@@ -115,6 +122,8 @@ const starFragmentShader = /* glsl */ `
   }
 
   void main() {
+    if (vIntro <= 0.001) discard;
+
     vec3 normal = normalize(vNormal);
     vec3 viewDirection = normalize(vViewDirection);
     vec3 lightDirection = normalize(vec3(-0.35, 0.7, 1.0));
@@ -134,7 +143,8 @@ const starFragmentShader = /* glsl */ `
     color += vec3(1.0, 0.985, 0.88) * brightStars * pulse * 0.9;
     color += vec3(0.68, 0.82, 1.0) * rim * 0.7;
     color += starColor * tip * 0.22;
-    color *= uIntensity * vIntensity;
+    color *= uIntensity * vIntensity * vIntro;
+    color *= 1.0 + 0.1 * sin(uTime * ${NAVIGATION_BREATH_SPEED.toFixed(6)} + vPhase);
     gl_FragColor = vec4(color, 1.0);
   }
 `
@@ -158,6 +168,8 @@ const shellFragmentShader = /* glsl */ `
   uniform float uIntensity;
   uniform float uFalloff;
   uniform float uAlpha;
+  uniform float uIntro;
+  uniform float uPhase;
   varying vec3 vNormal;
   varying vec3 vViewDirection;
 
@@ -165,11 +177,11 @@ const shellFragmentShader = /* glsl */ `
     vec3 normal = normalize(vNormal);
     vec3 viewDirection = normalize(vViewDirection);
     float fresnel = pow(1.0 - max(dot(normal, viewDirection), 0.0), uFalloff);
-    float pulse = 0.84 + 0.16 * sin(uTime * 0.95);
+    float breath = 0.82 + 0.3 * sin(uTime * ${NAVIGATION_BREATH_SPEED.toFixed(6)} + uPhase);
     vec3 starColor = vec3(1.0, 0.94, 0.72);
     gl_FragColor = vec4(
-      starColor * fresnel * pulse * uIntensity,
-      fresnel * uAlpha * uIntensity
+      starColor * fresnel * breath * uIntensity * uIntro,
+      fresnel * uAlpha * uIntensity * uIntro * breath
     );
   }
 `
@@ -194,6 +206,7 @@ export function createNavigationStarField({ count = 3 } = {}) {
   const phases = new Float32Array(count)
   const intensities = new Float32Array(count)
   const tints = new Float32Array(count * 3)
+  const introReveals = new Float32Array(count)
 
   for (let index = 0; index < count; index += 1) {
     const variant = NAVIGATION_VARIANTS[index % NAVIGATION_VARIANTS.length]
@@ -207,6 +220,8 @@ export function createNavigationStarField({ count = 3 } = {}) {
   starGeometry.setAttribute('aPhase', new THREE.InstancedBufferAttribute(phases, 1))
   starGeometry.setAttribute('aIntensity', new THREE.InstancedBufferAttribute(intensities, 1))
   starGeometry.setAttribute('aTint', new THREE.InstancedBufferAttribute(tints, 3))
+  const introAttribute = new THREE.InstancedBufferAttribute(introReveals, 1)
+  starGeometry.setAttribute('aIntro', introAttribute)
 
   const starMaterial = new THREE.ShaderMaterial({
     vertexShader: starVertexShader,
@@ -234,7 +249,9 @@ export function createNavigationStarField({ count = 3 } = {}) {
         uTime: { value: 0 },
         uIntensity: { value: intensity },
         uFalloff: { value: falloff },
-        uAlpha: { value: alpha }
+        uAlpha: { value: alpha },
+        uIntro: { value: 0 },
+        uPhase: { value: 0 }
       },
       transparent: true,
       blending: THREE.AdditiveBlending,
@@ -246,9 +263,14 @@ export function createNavigationStarField({ count = 3 } = {}) {
     return material
   }
 
-  const innerShellMaterial = createShellMaterial({ falloff: 1.8, alpha: 0.38, intensity: 0.9 })
+  const shellMaterials = Array.from({ length: count }, (_, index) => {
+    const material = createShellMaterial({ falloff: 1.8, alpha: 0.38, intensity: 0.9 })
+    material.uniforms.uPhase.value =
+      NAVIGATION_VARIANTS[index % NAVIGATION_VARIANTS.length].phase
+    return material
+  })
   const shells = Array.from({ length: count }, (_, index) => {
-    const shell = new THREE.Mesh(baseGeometry, innerShellMaterial)
+    const shell = new THREE.Mesh(baseGeometry, shellMaterials[index])
     shell.name = `NavigationGlowShell${index + 1}`
     return shell
   })
@@ -293,19 +315,23 @@ export function createNavigationStarField({ count = 3 } = {}) {
 
   const glowTexture = createStarGlowTexture()
   const glowGeometry = new THREE.PlaneGeometry(1, 1)
-  const glowMaterial = new THREE.MeshBasicMaterial({
-    map: glowTexture,
-    color: 0xffffff,
-    transparent: true,
-    opacity: 0.8,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false,
-    depthTest: true,
-    side: THREE.DoubleSide,
-    toneMapped: false
-  })
+  const glowMaterials = Array.from(
+    { length: count },
+    () =>
+      new THREE.MeshBasicMaterial({
+        map: glowTexture,
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        depthTest: true,
+        side: THREE.DoubleSide,
+        toneMapped: false
+      })
+  )
   const glows = Array.from({ length: count }, (_, index) => {
-    const glow = new THREE.Mesh(glowGeometry, glowMaterial)
+    const glow = new THREE.Mesh(glowGeometry, glowMaterials[index])
     glow.name = `NavigationGlow${index + 1}`
     return glow
   })
@@ -317,20 +343,33 @@ export function createNavigationStarField({ count = 3 } = {}) {
   const instanceMatrix = new THREE.Matrix4()
   const shellScale = new THREE.Vector3()
 
+  function setIntro(reveals) {
+    let changed = false
+    for (let index = 0; index < count; index += 1) {
+      const reveal = THREE.MathUtils.clamp(reveals?.[index] ?? 0, 0, 1)
+      if (introReveals[index] === reveal) continue
+      introReveals[index] = reveal
+      shellMaterials[index].uniforms.uIntro.value = reveal
+      changed = true
+    }
+    if (changed) introAttribute.needsUpdate = true
+  }
+
   function setTransform(index, position, quaternion, scale, rotationZ) {
     instanceMatrix.compose(position, quaternion, scale)
     stars.setMatrixAt(index, instanceMatrix)
 
+    const introScale = 0.84 + 0.16 * introReveals[index]
     const shell = shells[index]
     shell.position.copy(position)
     shell.quaternion.copy(quaternion)
-    shellScale.copy(scale).multiplyScalar(1.12)
+    shellScale.copy(scale).multiplyScalar(1.12 * introScale)
     shell.scale.copy(shellScale)
 
     const glow = glows[index]
     glow.position.copy(position)
     glow.position.z -= 0.06
-    glow.scale.set(scale.x * 6.5, scale.x * 6.5, 1)
+    glow.scale.set(scale.x * 6.5 * introScale, scale.x * 6.5 * introScale, 1)
     glow.rotation.set(0, 0, rotationZ)
   }
 
@@ -340,24 +379,32 @@ export function createNavigationStarField({ count = 3 } = {}) {
 
   function update(time, motionEnabled) {
     starMaterial.uniforms.uTime.value = motionEnabled ? time : 0
-    innerShellMaterial.uniforms.uTime.value = motionEnabled ? time : 0
-    const breath = motionEnabled ? 0.9 + 0.1 * Math.sin(time * 0.7) : 1
-    glowMaterial.opacity = 0.8 * breath
+    shellMaterials.forEach((material) => {
+      material.uniforms.uTime.value = motionEnabled ? time : 0
+    })
+    glowMaterials.forEach((material, index) => {
+      const phase = NAVIGATION_VARIANTS[index % NAVIGATION_VARIANTS.length].phase
+      const breath = motionEnabled
+        ? 0.85 + 0.15 * Math.sin(time * NAVIGATION_BREATH_SPEED + phase)
+        : 1
+      material.opacity = 0.8 * breath * introReveals[index]
+    })
   }
 
   function dispose() {
     starGeometry.dispose()
     baseGeometry.dispose()
     starMaterial.dispose()
-    innerShellMaterial.dispose()
+    shellMaterials.forEach((material) => material.dispose())
     glowGeometry.dispose()
-    glowMaterial.dispose()
+    glowMaterials.forEach((material) => material.dispose())
     glowTexture.dispose()
   }
 
   return {
     group,
     variants: NAVIGATION_VARIANTS,
+    setIntro,
     setTransform,
     commit,
     update,

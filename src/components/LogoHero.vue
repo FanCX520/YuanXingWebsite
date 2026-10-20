@@ -5,8 +5,7 @@ import { createLogoScene } from '../three/logoScene.js'
 const props = defineProps({
   onFrame: { type: Function, default: null },
   getLogoTarget: { type: Function, default: null },
-  getNavigationTargets: { type: Function, default: null },
-  getNavigationProgress: { type: Function, default: null }
+  getNavigationTargets: { type: Function, default: null }
 })
 const emit = defineEmits(['light-update', 'scene-ready', 'scene-error'])
 const canvasRef = ref(null)
@@ -22,8 +21,7 @@ onMounted(() => {
       getLogoTarget: () => props.getLogoTarget?.() ?? null,
       onLightUpdate: (state) => emit('light-update', state),
       onFrame: (state) => props.onFrame?.(state),
-      getNavigationTargets: () => props.getNavigationTargets?.() ?? [],
-      getNavigationProgress: () => props.getNavigationProgress?.() ?? 0
+      getNavigationTargets: () => props.getNavigationTargets?.() ?? []
     })
     emit('scene-ready')
   } catch (error) {

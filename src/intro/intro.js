@@ -16,7 +16,10 @@ const SCENE_START = {
   glow: 0,
   light: 0,
   bloom: 0,
-  motion: 0
+  motion: 0,
+  nav1: 0,
+  nav2: 0,
+  nav3: 0
 }
 
 const SCENE_END = {
@@ -27,7 +30,10 @@ const SCENE_END = {
   glow: 1,
   light: 1,
   bloom: 1,
-  motion: 1
+  motion: 1,
+  nav1: 1,
+  nav2: 1,
+  nav3: 1
 }
 
 // DOM 侧：字标底色亮度 / 高光强度 / 高光扩散 / 高光中心高度 / 字标展开掩膜 / 背景浮现
@@ -119,6 +125,12 @@ export function initIntro({ scene }) {
     .add(scene.intro, { light: 1, duration: 1500, ease: 'inOutSine' }, 500)
     .add(scene.intro, { ringReveal: 1.25, duration: 1400, ease: 'outCubic' }, 1150)
     .add(scene.intro, { ribbon: 1, duration: 1300, ease: 'inOutSine' }, 1200)
+
+  // 主星亮到一半后，三颗导航星依次显现；其余环带、字标和背景时间轴保持不变
+  timeline
+    .add(scene.intro, { nav1: 1, duration: 420, ease: 'outCubic' }, 900)
+    .add(scene.intro, { nav2: 1, duration: 420, ease: 'outCubic' }, 1080)
+    .add(scene.intro, { nav3: 1, duration: 420, ease: 'outCubic' }, 1260)
 
   // ④ 光从字标中间上方展开，把字标由暗到亮照亮（3.3s 前完成）
   timeline

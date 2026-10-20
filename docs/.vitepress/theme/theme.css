@@ -149,26 +149,6 @@ body {
   pointer-events: none;
 }
 
-.scroll-cue {
-  position: absolute;
-  z-index: 4;
-  bottom: max(28px, env(safe-area-inset-bottom));
-  left: 50%;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  transform: translateX(-50%);
-  color: var(--ink-dim);
-  font-size: 0.75rem;
-  letter-spacing: 0.15em;
-  text-decoration: none;
-}
-
-.scroll-cue span {
-  color: var(--site-blue);
-  font-size: 1.2rem;
-}
-
 .page-content {
   position: relative;
   z-index: 1;

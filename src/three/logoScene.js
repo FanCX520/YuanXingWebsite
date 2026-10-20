@@ -2,9 +2,13 @@ import * as THREE from 'three'
 import { createSparkleOctagramGeometry } from './starGeometry.js'
 import { createRibbonGeometry } from './ribbonGeometry.js'
 import { createLogoOrbitProfiles } from './logoOrbitProfiles.js'
-import { createCosmicMaterials } from './cosmicMaterials.js'
+import { createCosmicMaterials, MAIN_STAR_BREATH_SPEED } from './cosmicMaterials.js'
 import { createLogoBloom } from './logoBloom.js'
-import { createNavigationStarField } from './navigationStars.js'
+import {
+  createNavigationStarField,
+  NAVIGATION_BREATH_SPEED,
+  NAVIGATION_ROTATION_SPEED
+} from './navigationStars.js'
 
 // 星体外观：哑光深蓝，体积交给模型本身，材质只做基础塑形
 const STAR_MATERIAL = {
@@ -38,7 +42,6 @@ const OCTAGRAM = {
   radialSegments: 512,
   rings: 96
 }
-
 // 八角轮廓由长针主星与 45° 短针星取并集，前后共用同一厚度场
 function buildStarEmblem(material) {
   const geometry = createSparkleOctagramGeometry({
@@ -123,8 +126,7 @@ export function createLogoScene(canvas, {
   onLightUpdate,
   onFrame,
   getLogoTarget,
-  getNavigationTargets,
-  getNavigationProgress
+  getNavigationTargets
 } = {}) {
   const renderer = new THREE.WebGLRenderer({
     canvas,
@@ -196,7 +198,10 @@ export function createLogoScene(canvas, {
     glow: 0,
     light: 0,
     bloom: 0,
-    motion: 0
+    motion: 0,
+    nav1: 0,
+    nav2: 0,
+    nav3: 0
   }
   const STAR_LIGHT_INTENSITY = starLight.intensity
 
@@ -221,6 +226,7 @@ export function createLogoScene(canvas, {
     cosmicMaterials.starGlow.uniforms.uIntro.value = intro.glow
     starLight.intensity = STAR_LIGHT_INTENSITY * intro.light
     bloom.setIntensity(intro.bloom)
+    navigationField?.setIntro([intro.nav1, intro.nav2, intro.nav3])
   }
 
   function resize() {
@@ -249,9 +255,6 @@ export function createLogoScene(canvas, {
 
     const worldWidth = camera.right - camera.left
     const worldHeight = camera.top - camera.bottom
-    const navProgress = getNavigationProgress?.() ?? 0
-    const motionFactor = 1 - 0.85 * navProgress
-
     targets.slice(0, 3).forEach((target, index) => {
       if (!target) return
       const variant = navigationField.variants[index % navigationField.variants.length]
@@ -269,22 +272,24 @@ export function createLogoScene(canvas, {
         camera.top - (y / bounds.height) * worldHeight,
         0.68
       )
+      const navBreath = reducedMotion.matches
+        ? 0
+        : Math.sin(elapsed * NAVIGATION_BREATH_SPEED + variant.phase)
       const rotation = reducedMotion.matches
         ? variant.phase
-        : elapsed * variant.speed * motionFactor + variant.phase
+        : elapsed * NAVIGATION_ROTATION_SPEED + variant.phase
       const tiltX = reducedMotion.matches
         ? 0
-        : (variant.tiltX + Math.sin(elapsed * 0.21 + variant.phase) * 0.035) *
-          (0.35 + 0.65 * motionFactor)
+        : variant.tiltX
       const tiltY = reducedMotion.matches
         ? 0
-        : (variant.tiltY + Math.cos(elapsed * 0.17 + variant.phase) * 0.04) *
-          (0.35 + 0.65 * motionFactor)
+        : variant.tiltY
       navigationEuler.set(tiltX, tiltY, rotation)
       navigationRotation.setFromEuler(navigationEuler)
       const pixelSize = Math.max(rect ? Math.min(rect.width, rect.height) : 44, 28)
       const worldSize = (pixelSize / bounds.width) * worldWidth * 0.52
-      navigationScale.setScalar(worldSize * variant.scale)
+      const scaleBreath = reducedMotion.matches ? 1 : 1 + navBreath * 0.06
+      navigationScale.setScalar(worldSize * variant.scale * scaleBreath)
       navigationPosition.z = 0.68 + variant.depth
       navigationField.setTransform(
         index,
@@ -364,6 +369,11 @@ export function createLogoScene(canvas, {
     root.rotation.x = currentTilt.x
     root.rotation.y = currentTilt.y
     updateLogoFromTarget()
+    const starBreath = motionEnabled
+      ? 1 + Math.sin(elapsed * MAIN_STAR_BREATH_SPEED + 0.3) * 0.028 * intro.star
+      : 1
+    star.scale.setScalar(starBreath)
+    starGlow.scale.setScalar(1.028 * starBreath)
     if (root.visible && !getLogoTarget?.()) {
       root.position.y += Math.sin(elapsed * 0.45) * 0.008 * motionScale
     }

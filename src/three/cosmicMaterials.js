@@ -1,5 +1,8 @@
 import * as THREE from 'three'
 
+export const MAIN_STAR_BREATH_PERIOD = 5
+export const MAIN_STAR_BREATH_SPEED = (Math.PI * 2) / MAIN_STAR_BREATH_PERIOD
+
 const vertexShader = /* glsl */ `
   varying vec3 vLocalPosition;
   varying vec3 vNormal;
@@ -71,6 +74,8 @@ const starFragmentShader = /* glsl */ `
     color += starColor * fineStars * pulse * 0.72;
     color += vec3(1.0, 0.985, 0.88) * brightStars * pulse * 0.95;
     color += vec3(0.68, 0.82, 1.0) * rim * 0.28;
+    float breath = 1.0 + 0.05 * sin(uTime * ${MAIN_STAR_BREATH_SPEED.toFixed(6)} + 0.3);
+    color *= breath;
     // 开场：光从星心向外扩散，uReveal 为当前扩散半径
     float reveal = 1.0 - smoothstep(uReveal - 0.32, uReveal + 0.12, length(vLocalPosition.xy));
     color *= uIntro * mix(0.02, 1.0, reveal);
@@ -161,9 +166,12 @@ const glowFragmentShader = /* glsl */ `
     vec3 normal = normalize(vNormal);
     vec3 viewDirection = normalize(vViewDirection);
     float fresnel = pow(1.0 - max(dot(normal, viewDirection), 0.0), 2.4);
-    float pulse = 0.82 + 0.18 * sin(uTime * 1.15);
+    float breath = 0.82 + 0.3 * sin(uTime * ${MAIN_STAR_BREATH_SPEED.toFixed(6)} + 0.6);
     vec3 starColor = vec3(1.0, 0.94, 0.72);
-    gl_FragColor = vec4(starColor * fresnel * pulse * uIntro, fresnel * 0.46 * uIntro);
+    gl_FragColor = vec4(
+      starColor * fresnel * breath * uIntro,
+      fresnel * 0.46 * breath * uIntro
+    );
   }
 `
 

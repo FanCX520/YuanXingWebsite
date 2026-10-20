@@ -150,10 +150,6 @@ function getNavigationTargets() {
   return navigationTargets.value
 }
 
-function getNavigationProgress() {
-  return brandProgress.value
-}
-
 function updateWordmarkLight({ x, y, visible }) {
   wordmarkRef.value?.updateLight({ x, y, visible }, heroAnchorRef.value)
 }
@@ -243,13 +239,11 @@ onBeforeUnmount(() => {
           :on-frame="updateSceneFrame"
           :get-logo-target="getLogoTarget"
           :get-navigation-targets="getNavigationTargets"
-          :get-navigation-progress="getNavigationProgress"
           @light-update="updateWordmarkLight"
           @scene-ready="handleSceneReady"
           @scene-error="sceneAvailable = false"
         />
         <BrandWordmark ref="wordmarkRef" :travel-style="wordmarkStyle" />
-        <a class="scroll-cue" href="#about">向下探索 <span aria-hidden="true">↓</span></a>
       </section>
       <div class="page-content">
         <Content />
