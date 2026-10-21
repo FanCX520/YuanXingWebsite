@@ -49,6 +49,7 @@ function getStackProfile(cardWidth) {
   const progress = linear * linear * (3 - 2 * linear)
 
   return {
+    focusScale: lerp(0.9, 1, progress),
     inward: lerp(58, 84, progress),
     scaleDrop: lerp(0.12, 0.1, progress),
     opacityDrop: lerp(0.3, 0.28, progress),
@@ -82,7 +83,9 @@ function updateCards() {
     const depth = Math.min(Math.abs(relative), 2)
     const primaryDepth = Math.min(depth, 1)
     const secondaryDepth = Math.max(depth - 1, 0)
-    const scale = 1 - primaryDepth * profile.scaleDrop - secondaryDepth * 0.08
+    const scale =
+      profile.focusScale *
+      (1 - primaryDepth * profile.scaleDrop - secondaryDepth * 0.08)
     const stackX =
       -Math.sign(relative) * profile.inward * (primaryDepth + secondaryDepth * 0.85)
     const stackY = primaryDepth * profile.lift + secondaryDepth * 8
@@ -459,7 +462,7 @@ onBeforeUnmount(() => {
   transform:
     translate3d(var(--carousel-x), var(--carousel-y), 0)
     scale(var(--carousel-scale));
-  transform-origin: center top;
+  transform-origin: center center;
   opacity: var(--carousel-opacity);
   filter: var(--carousel-filter);
 }
