@@ -40,6 +40,23 @@ function clampIndex(index) {
   return Math.min(Math.max(index, 0), Math.max(props.games.length - 1, 0))
 }
 
+function lerp(start, end, progress) {
+  return start + (end - start) * progress
+}
+
+function getStackProfile(cardWidth) {
+  const linear = Math.min(Math.max((cardWidth - 240) / 260, 0), 1)
+  const progress = linear * linear * (3 - 2 * linear)
+
+  return {
+    inward: lerp(58, 84, progress),
+    scaleDrop: lerp(0.12, 0.1, progress),
+    opacityDrop: lerp(0.3, 0.28, progress),
+    lift: lerp(10, 14, progress),
+    blur: lerp(1.2, 2.4, progress)
+  }
+}
+
 function getCardStep() {
   const firstCard = cardElements.get(0)
   const track = trackRef.value
@@ -56,8 +73,8 @@ function updateCards() {
   if (!viewport || !cardStep) return
 
   const scrollPosition = viewport.scrollLeft / cardStep
-  const compact = window.innerWidth <= 680
-  const stackStep = compact ? 62 : 84
+  const cardWidth = cardElements.get(0)?.offsetWidth ?? 500
+  const profile = getStackProfile(cardWidth)
   const nearestIndex = clampIndex(Math.round(scrollPosition))
 
   cardElements.forEach((card, index) => {
@@ -65,19 +82,25 @@ function updateCards() {
     const depth = Math.min(Math.abs(relative), 2)
     const primaryDepth = Math.min(depth, 1)
     const secondaryDepth = Math.max(depth - 1, 0)
-    const scale = compact
-      ? 1 - primaryDepth * 0.12 - secondaryDepth * 0.08
-      : 1 - primaryDepth * 0.1 - secondaryDepth * 0.08
+    const scale = 1 - primaryDepth * profile.scaleDrop - secondaryDepth * 0.08
     const stackX =
-      -Math.sign(relative) * stackStep * (primaryDepth + secondaryDepth * 0.85)
-    const stackY = primaryDepth * (compact ? 10 : 14) + secondaryDepth * 8
-    const opacity = Math.max(1 - depth * (compact ? 0.3 : 0.28), 0.25)
+      -Math.sign(relative) * profile.inward * (primaryDepth + secondaryDepth * 0.85)
+    const stackY = primaryDepth * profile.lift + secondaryDepth * 8
+    const opacity = Math.max(1 - depth * profile.opacityDrop, 0.25)
+    const blur = Math.min(
+      primaryDepth * profile.blur + secondaryDepth * profile.blur * 0.55,
+      3.5
+    )
 
     card.style.setProperty('--carousel-shade', primaryDepth.toFixed(3))
     card.style.setProperty('--carousel-scale', scale.toFixed(3))
     card.style.setProperty('--carousel-x', `${stackX.toFixed(1)}px`)
     card.style.setProperty('--carousel-y', `${stackY.toFixed(1)}px`)
     card.style.setProperty('--carousel-opacity', opacity.toFixed(3))
+    card.style.setProperty(
+      '--carousel-filter',
+      blur > 0.03 ? `blur(${blur.toFixed(2)}px)` : 'none'
+    )
     card.style.zIndex = String(80 - Math.round(depth * 10))
   })
 
@@ -391,6 +414,8 @@ onBeforeUnmount(() => {
 .game-carousel {
   --carousel-card-width: min(500px, calc(100vw - 104px));
   position: relative;
+  width: calc(100% + var(--page-inline) * 2);
+  margin-inline: calc(var(--page-inline) * -1);
   margin-top: clamp(10px, 2svh, 18px);
 }
 
@@ -423,6 +448,7 @@ onBeforeUnmount(() => {
 }
 
 .game-carousel__slide {
+  --carousel-filter: none;
   --carousel-shade: 0;
   --carousel-opacity: 1;
   --carousel-scale: 1;
@@ -435,6 +461,7 @@ onBeforeUnmount(() => {
     scale(var(--carousel-scale));
   transform-origin: center top;
   opacity: var(--carousel-opacity);
+  filter: var(--carousel-filter);
 }
 
 .game-carousel__slide.is-active {
@@ -451,11 +478,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 680px) {
-  .game-carousel {
-    width: calc(100% + var(--page-inline) * 2);
-    margin-inline: calc(var(--page-inline) * -1);
-  }
-
   .game-carousel__viewport {
     padding-block: 24px 34px;
   }
