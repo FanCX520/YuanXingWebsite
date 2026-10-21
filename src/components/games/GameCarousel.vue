@@ -298,10 +298,15 @@ function handleKeydown(event) {
 function updateLayout() {
   const viewport = viewportRef.value
   const track = trackRef.value
-  const firstCard = cardElements.get(0)
-  if (!viewport || !track || !firstCard) return
+  if (!viewport || !track) return
 
-  const edgeSpace = Math.max(16, (viewport.clientWidth - firstCard.offsetWidth) / 2)
+  const cardWidth = Math.min(500, Math.max(240, viewport.clientWidth - 16))
+  track.style.setProperty('--carousel-card-width', `${cardWidth}px`)
+
+  const firstCard = cardElements.get(0)
+  if (!firstCard) return
+
+  const edgeSpace = Math.max((viewport.clientWidth - firstCard.offsetWidth) / 2, 0)
   track.style.setProperty('--carousel-inline-space', `${edgeSpace}px`)
 
   window.requestAnimationFrame(() => {
@@ -380,7 +385,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .game-carousel {
-  --carousel-card-width: min(500px, calc(100vw - 96px));
+  --carousel-card-width: min(500px, calc(100vw - 104px));
   position: relative;
   margin-top: clamp(10px, 2svh, 18px);
 }
