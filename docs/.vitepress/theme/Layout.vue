@@ -8,7 +8,7 @@ import {
   ref,
   watch
 } from 'vue'
-import { useRoute, withBase } from 'vitepress'
+import { useRoute, useRouter, withBase } from 'vitepress'
 // 直接引用 Content，避免 data loader 与 VitePress 公共入口形成循环 chunk。
 import { Content } from 'vitepress/dist/client/app/components/Content.js'
 import BrandWordmark from '../../../src/components/BrandWordmark.vue'
@@ -19,11 +19,13 @@ import { usePageSectionSnap } from '../../../src/composables/usePageSectionSnap.
 const LogoHero = defineAsyncComponent(() => import('../../../src/components/LogoHero.vue'))
 
 const route = useRoute()
+const router = useRouter()
 const logoHeroRef = ref(null)
 const heroAnchorRef = ref(null)
 const wordmarkRef = ref(null)
 const sceneFailed = ref(false)
 const introLocked = ref(false)
+const routeLeaving = ref(false)
 const scrollProgress = ref(0)
 const activeSection = ref('')
 const viewport = ref({ width: 1440, height: 900 })
@@ -214,6 +216,43 @@ function handleSectionNavigation(event, item) {
   scrollToSection(target, item.href)
 }
 
+async function handleHomeNavigation(event) {
+  if (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return
+  }
+
+  if (isHome.value) {
+    const hero = document.querySelector('.home-hero')
+    if (!hero) return
+
+    event.preventDefault()
+    event.stopPropagation()
+    scrollToSection(hero, withBase('/'))
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+  if (routeLeaving.value) return
+
+  routeLeaving.value = true
+  await new Promise((resolve) => window.setTimeout(resolve, 180))
+
+  try {
+    await router.go(withBase('/'))
+  } finally {
+    window.setTimeout(() => {
+      routeLeaving.value = false
+    }, 0)
+  }
+}
+
 function scheduleViewportUpdate() {
   if (scrollFrame) return
   scrollFrame = window.requestAnimationFrame(() => {
@@ -324,7 +363,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="site-shell" :class="{ 'site-shell--home': isHome }">
+  <div
+    class="site-shell"
+    :class="{
+      'site-shell--home': isHome,
+      'site-shell--route-leaving': routeLeaving
+    }"
+  >
     <SpaceBackdrop />
 
     <a
@@ -333,15 +378,19 @@ onBeforeUnmount(() => {
       :class="{ 'brand-home--ready': brandReady }"
       :style="brandHomeStyle"
       :href="withBase('/')"
+      target="_self"
       :tabindex="brandReady ? 0 : -1"
       :aria-hidden="!brandReady"
       aria-label="返回元星联邦首页"
+      @click="handleHomeNavigation"
     />
     <a
       v-else
       class="brand-home brand-home--static"
       :href="withBase('/')"
+      target="_self"
       aria-label="返回元星联邦首页"
+      @click="handleHomeNavigation"
     >
       <span class="brand-home__star" aria-hidden="true">✦</span>
       <span>元星联邦</span>

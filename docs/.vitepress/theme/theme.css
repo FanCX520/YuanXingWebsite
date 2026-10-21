@@ -33,6 +33,13 @@ html.intro-locked body {
   isolation: isolate;
   min-height: 100vh;
   background: transparent;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.site-shell--route-leaving {
+  opacity: 0;
+  transform: scale(0.996);
+  pointer-events: none;
 }
 
 .site-shell > .space-backdrop {
@@ -491,6 +498,10 @@ html.intro-locked body {
   }
 
   .star-navigation-glass {
+    transition: none;
+  }
+
+  .site-shell {
     transition: none;
   }
 }
