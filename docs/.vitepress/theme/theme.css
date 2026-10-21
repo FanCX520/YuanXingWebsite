@@ -87,6 +87,35 @@ html.intro-locked body {
   pointer-events: none;
 }
 
+.star-navigation::before {
+  position: fixed;
+  z-index: 0;
+  top: 12px;
+  right: clamp(20px, 2vw, 28px);
+  left: clamp(20px, 2vw, 28px);
+  height: 64px;
+  border: 1px solid rgba(157, 185, 255, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(
+    180deg,
+    rgba(9, 18, 42, 0.72),
+    rgba(5, 11, 28, 0.52)
+  );
+  box-shadow:
+    0 14px 44px rgba(1, 5, 18, 0.3),
+    inset 0 1px 0 rgba(217, 232, 255, 0.06);
+  backdrop-filter: blur(18px) saturate(125%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+.star-navigation--settled::before {
+  opacity: 1;
+}
+
 .star-navigation__link {
   position: absolute;
   display: grid;
@@ -307,6 +336,15 @@ html.intro-locked body {
 }
 
 @media (max-width: 680px) {
+  .star-navigation::before {
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    height: 104px;
+    border-radius: 24px;
+  }
+
   .page-content img.image-left,
   .page-content img.image-right {
     max-width: 100%;
@@ -445,6 +483,10 @@ html.intro-locked body {
   }
 
   .content-section li {
+    transition: none;
+  }
+
+  .star-navigation::before {
     transition: none;
   }
 }

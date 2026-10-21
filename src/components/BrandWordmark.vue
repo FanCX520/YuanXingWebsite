@@ -51,7 +51,7 @@ defineExpose({ updateLight })
   --light-opacity: 0;
   position: fixed;
   inset: 0;
-  z-index: 2;
+  z-index: 35;
   pointer-events: none;
 }
 

@@ -45,6 +45,9 @@ const brandProgress = computed(() => {
   const progress = scrollProgress.value
   return progress * progress * (3 - 2 * progress)
 })
+const navigationSettled = computed(
+  () => !isHome.value || scrollProgress.value >= 0.92
+)
 const sectionPositions = {
   about: { desktop: { x: 0.14, y: 0.36 }, mobile: { x: 0.13, y: 0.54 } },
   games: { desktop: { x: 0.84, y: 0.39 }, mobile: { x: 0.87, y: 0.54 } },
@@ -340,6 +343,7 @@ onBeforeUnmount(() => {
 
     <nav
       class="star-navigation"
+      :class="{ 'star-navigation--settled': navigationSettled }"
       aria-label="首页章节导航"
       :inert="introLocked ? '' : null"
     >
@@ -354,10 +358,22 @@ onBeforeUnmount(() => {
         :aria-current="item.active ? 'location' : undefined"
         @click="handleSectionNavigation($event, item)"
       >
-        <span v-if="!isHome || sceneFailed" class="star-navigation__fallback" aria-hidden="true">✦</span>
+        <span
+          v-if="!isHome || sceneFailed || navigationSettled"
+          class="star-navigation__fallback"
+          aria-hidden="true"
+        >
+          ✦
+        </span>
         <span class="star-navigation__label">{{ item.label }}</span>
       </a>
     </nav>
+
+    <BrandWordmark
+      v-if="isHome"
+      ref="wordmarkRef"
+      :travel-style="wordmarkStyle"
+    />
 
     <main v-if="isHome" class="home-page" :style="{ '--scroll-progress': scrollProgress }">
       <section class="home-hero" aria-labelledby="home-title">
@@ -372,7 +388,6 @@ onBeforeUnmount(() => {
           @scene-ready="handleSceneReady"
           @scene-error="handleSceneError"
         />
-        <BrandWordmark ref="wordmarkRef" :travel-style="wordmarkStyle" />
       </section>
       <div class="page-content" :inert="introLocked ? '' : null">
         <Content />
