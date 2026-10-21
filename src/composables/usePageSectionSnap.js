@@ -1,6 +1,6 @@
 import { onBeforeUnmount, onMounted, watch } from 'vue'
 
-const SNAP_RATIO = 0.32
+const SNAP_RATIO = 0.42
 const IDLE_DELAY = 180
 const SNAP_MIN_DURATION = 380
 const SNAP_MAX_DURATION = 650
@@ -84,7 +84,7 @@ export function usePageSectionSnap({ enabled }) {
     )
     const threshold = Math.min(
       Math.max(window.innerHeight * SNAP_RATIO, 160),
-      320
+      420
     )
 
     if (Math.abs(nearest - current) <= 1) return
