@@ -1,10 +1,10 @@
 import { onBeforeUnmount, onMounted, watch } from 'vue'
 
 const SNAP_RATIO = 0.32
-const IDLE_DELAY = 140
-const SNAP_MIN_DURATION = 240
-const SNAP_MAX_DURATION = 520
-const SNAP_DURATION_PER_PIXEL = 0.5
+const IDLE_DELAY = 180
+const SNAP_MIN_DURATION = 380
+const SNAP_MAX_DURATION = 650
+const SNAP_DURATION_PER_PIXEL = 1.2
 const SCROLL_KEYS = new Set([
   'ArrowUp',
   'ArrowDown',
@@ -41,6 +41,11 @@ export function usePageSectionSnap({ enabled }) {
   function clearIdleTimer() {
     window.clearTimeout(idleTimer)
     idleTimer = 0
+  }
+
+  function scheduleAlignment() {
+    clearIdleTimer()
+    idleTimer = window.setTimeout(alignNearestSection, IDLE_DELAY)
   }
 
   function finishSnap() {
@@ -106,7 +111,9 @@ export function usePageSectionSnap({ enabled }) {
       if (!isSnapping || token !== snapToken) return
 
       const progress = Math.min((timestamp - startedAt) / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
+      const eased =
+        progress * progress * progress *
+        (progress * (progress * 6 - 15) + 10)
       window.scrollTo({ top: start + distance * eased, behavior: 'auto' })
 
       if (progress < 1) {
@@ -123,8 +130,7 @@ export function usePageSectionSnap({ enabled }) {
 
   function handleScroll() {
     if (!canSnap() || isSnapping) return
-    clearIdleTimer()
-    idleTimer = window.setTimeout(alignNearestSection, IDLE_DELAY)
+    scheduleAlignment()
   }
 
   function handleScrollEnd() {
@@ -132,8 +138,7 @@ export function usePageSectionSnap({ enabled }) {
 
     if (isSnapping) return
 
-    clearIdleTimer()
-    alignNearestSection()
+    scheduleAlignment()
   }
 
   function handleInput() {
