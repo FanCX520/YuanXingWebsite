@@ -40,34 +40,48 @@ function clampIndex(index) {
   return Math.min(Math.max(index, 0), Math.max(props.games.length - 1, 0))
 }
 
+function getCardStep() {
+  const firstCard = cardElements.get(0)
+  const track = trackRef.value
+  if (!firstCard || !track) return 0
+
+  const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 0
+  return firstCard.offsetWidth + gap
+}
+
 function updateCards() {
   updateFrame = 0
   const viewport = viewportRef.value
-  if (!viewport) return
+  const cardStep = getCardStep()
+  if (!viewport || !cardStep) return
 
-  const viewportBounds = viewport.getBoundingClientRect()
-  const viewportCenter = viewportBounds.left + viewportBounds.width / 2
-  let nearestIndex = 0
-  let nearestDistance = Number.POSITIVE_INFINITY
+  const scrollPosition = viewport.scrollLeft / cardStep
+  const compact = window.innerWidth <= 680
+  const stackStep = compact ? 62 : 84
+  const nearestIndex = clampIndex(Math.round(scrollPosition))
 
   cardElements.forEach((card, index) => {
-    const bounds = card.getBoundingClientRect()
-    const distance = Math.abs(bounds.left + bounds.width / 2 - viewportCenter)
-    const depth = Math.min(distance / Math.max(bounds.width * 0.82, 1), 1)
+    const relative = index - scrollPosition
+    const depth = Math.min(Math.abs(relative), 2)
+    const primaryDepth = Math.min(depth, 1)
+    const secondaryDepth = Math.max(depth - 1, 0)
+    const scale = compact
+      ? 1 - primaryDepth * 0.12 - secondaryDepth * 0.08
+      : 1 - primaryDepth * 0.1 - secondaryDepth * 0.08
+    const stackX =
+      -Math.sign(relative) * stackStep * (primaryDepth + secondaryDepth * 0.85)
+    const stackY = primaryDepth * (compact ? 10 : 14) + secondaryDepth * 8
+    const opacity = Math.max(1 - depth * (compact ? 0.3 : 0.28), 0.25)
 
-    if (distance < nearestDistance) {
-      nearestDistance = distance
-      nearestIndex = index
-    }
-
-    card.style.setProperty('--carousel-depth', depth.toFixed(3))
-    card.style.setProperty('--carousel-scale', (1 - depth * 0.18).toFixed(3))
-    card.style.setProperty('--carousel-y', `${(depth * 18).toFixed(1)}px`)
-    card.style.setProperty('--carousel-opacity', (1 - depth * 0.48).toFixed(3))
-    card.style.zIndex = String(100 - Math.round(depth * 50))
+    card.style.setProperty('--carousel-shade', primaryDepth.toFixed(3))
+    card.style.setProperty('--carousel-scale', scale.toFixed(3))
+    card.style.setProperty('--carousel-x', `${stackX.toFixed(1)}px`)
+    card.style.setProperty('--carousel-y', `${stackY.toFixed(1)}px`)
+    card.style.setProperty('--carousel-opacity', opacity.toFixed(3))
+    card.style.zIndex = String(80 - Math.round(depth * 10))
   })
 
-  activeIndex.value = clampIndex(nearestIndex)
+  activeIndex.value = nearestIndex
 }
 
 function scheduleCardUpdate() {
@@ -107,14 +121,10 @@ function stopSnapAnimation() {
 
 function getCenteredScrollLeft(index) {
   const viewport = viewportRef.value
-  const card = cardElements.get(clampIndex(index))
-  if (!viewport || !card) return null
+  const cardStep = getCardStep()
+  if (!viewport || !cardStep) return null
 
-  const viewportBounds = viewport.getBoundingClientRect()
-  const cardBounds = card.getBoundingClientRect()
-  const cardCenter = cardBounds.left + cardBounds.width / 2
-  const viewportCenter = viewportBounds.left + viewportBounds.width / 2
-  return viewport.scrollLeft + cardCenter - viewportCenter
+  return clampIndex(index) * cardStep
 }
 
 function centerCard(index, behavior = 'smooth') {
@@ -404,14 +414,15 @@ onBeforeUnmount(() => {
 }
 
 .game-carousel__slide {
-  --carousel-depth: 0;
+  --carousel-shade: 0;
   --carousel-opacity: 1;
   --carousel-scale: 1;
+  --carousel-x: 0px;
   --carousel-y: 0px;
   flex: 0 0 var(--carousel-card-width);
   min-width: 0;
   transform:
-    translate3d(0, var(--carousel-y), 0)
+    translate3d(var(--carousel-x), var(--carousel-y), 0)
     scale(var(--carousel-scale));
   transform-origin: center top;
   opacity: var(--carousel-opacity);

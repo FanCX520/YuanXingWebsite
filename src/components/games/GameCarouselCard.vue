@@ -83,7 +83,7 @@ const statusLabel = computed(
   inset: 0;
   background: rgba(1, 5, 16, 0.54);
   content: '';
-  opacity: calc(var(--carousel-depth, 0) * 0.82);
+  opacity: calc(var(--carousel-shade, 0) * 0.52);
   pointer-events: none;
 }
 
