@@ -79,7 +79,7 @@ export function applyIntroFallback() {
   writeCss(INTRO_PARAM === 'off' || reduced ? CSS_END : CSS_START)
 }
 
-export function initIntro({ scene }) {
+export function initIntro({ scene, onComplete }) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const disabled = INTRO_PARAM === 'off' || reduced
 
@@ -87,6 +87,7 @@ export function initIntro({ scene }) {
   if (!scene || disabled) {
     if (scene) applyScene(scene, SCENE_END)
     writeCss(CSS_END)
+    onComplete?.()
     return { skip() {}, dispose() {} }
   }
 
@@ -98,8 +99,6 @@ export function initIntro({ scene }) {
 
   const cleanup = () => {
     window.clearTimeout(safety)
-    window.removeEventListener('pointerdown', skip)
-    window.removeEventListener('keydown', skip)
   }
 
   const finish = () => {
@@ -108,6 +107,7 @@ export function initIntro({ scene }) {
     applyScene(scene, SCENE_END)
     writeCss(CSS_END)
     cleanup()
+    onComplete?.()
   }
 
   const skip = () => {
@@ -148,8 +148,6 @@ export function initIntro({ scene }) {
     .add(document.documentElement, { '--intro-backdrop': 1, duration: 1350, ease: 'inOutSine' }, 1950)
     .add(scene.intro, { motion: 1, duration: 1100, ease: 'inOutSine' }, 3500)
 
-  window.addEventListener('pointerdown', skip)
-  window.addEventListener('keydown', skip)
   safety = window.setTimeout(skip, SAFETY_TIMEOUT)
 
   if (Number.isFinite(FREEZE_SECONDS)) {
@@ -157,6 +155,7 @@ export function initIntro({ scene }) {
     timeline.pause()
     timeline.seek(Math.max(0, FREEZE_SECONDS * 1000))
     cleanup()
+    onComplete?.()
   } else {
     timeline.play()
   }

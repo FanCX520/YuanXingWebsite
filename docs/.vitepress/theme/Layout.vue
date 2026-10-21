@@ -1,5 +1,13 @@
 <script setup>
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch
+} from 'vue'
 import { useRoute, withBase } from 'vitepress'
 // 直接引用 Content，避免 data loader 与 VitePress 公共入口形成循环 chunk。
 import { Content } from 'vitepress/dist/client/app/components/Content.js'
@@ -15,6 +23,7 @@ const logoHeroRef = ref(null)
 const heroAnchorRef = ref(null)
 const wordmarkRef = ref(null)
 const sceneFailed = ref(false)
+const introLocked = ref(false)
 const scrollProgress = ref(0)
 const activeSection = ref('')
 const viewport = ref({ width: 1440, height: 900 })
@@ -27,6 +36,8 @@ const isHome = computed(() => {
   if (route.path === '/') return true
   return typeof window !== 'undefined' && window.location.pathname === '/'
 })
+
+if (isHome.value) introLocked.value = true
 
 const { scrollToSection } = usePageSectionSnap({ enabled: isHome })
 
@@ -216,13 +227,35 @@ function getLogoTarget() {
   return heroAnchorRef.value
 }
 
+function setIntroLock(locked) {
+  introLocked.value = locked
+  if (typeof document === 'undefined') return
+  document.documentElement.classList.toggle('intro-locked', locked)
+}
+
+function resetHomeScene() {
+  introHandle?.dispose()
+  introHandle = null
+  sceneReady = false
+  sceneFailed.value = false
+}
+
+function finishIntro() {
+  setIntroLock(false)
+}
+
 function updateSceneFrame() {
   introModule?.updateIntroEngine()
 }
 
 function startIntroIfReady() {
-  if (!introModule || !sceneReady || introHandle) return
-  introHandle = introModule.initIntro({ scene: logoHeroRef.value?.getScene?.() ?? null })
+  if (!isHome.value || !introModule || introHandle) return
+  if (!sceneReady && !sceneFailed.value) return
+
+  introHandle = introModule.initIntro({
+    scene: sceneReady ? logoHeroRef.value?.getScene?.() ?? null : null,
+    onComplete: finishIntro
+  })
 }
 
 function handleSceneReady() {
@@ -231,15 +264,43 @@ function handleSceneReady() {
   startIntroIfReady()
 }
 
+function handleSceneError() {
+  sceneReady = false
+  sceneFailed.value = true
+  startIntroIfReady()
+}
+
+watch(isHome, async (home) => {
+  resetHomeScene()
+
+  if (!home) {
+    setIntroLock(false)
+    return
+  }
+
+  setIntroLock(true)
+  window.scrollTo({ top: 0, behavior: 'auto' })
+  await nextTick()
+  if (!isHome.value) return
+
+  if (!introModule) {
+    introModule = await import('../../../src/intro/intro.js')
+  }
+  introModule.applyIntroFallback()
+  startIntroIfReady()
+})
+
 onMounted(async () => {
   window.addEventListener('scroll', scheduleViewportUpdate, { passive: true })
   window.addEventListener('resize', scheduleViewportUpdate)
   updateViewport()
   updateScrollState()
   updateActiveSection()
+  setIntroLock(isHome.value)
+  if (isHome.value) window.scrollTo({ top: 0, behavior: 'auto' })
 
   introModule = await import('../../../src/intro/intro.js')
-  introModule.applyIntroFallback()
+  if (isHome.value) introModule.applyIntroFallback()
   startIntroIfReady()
 })
 
@@ -248,6 +309,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', scheduleViewportUpdate)
   if (scrollFrame) window.cancelAnimationFrame(scrollFrame)
   introHandle?.dispose()
+  introHandle = null
+  setIntroLock(false)
 })
 </script>
 
@@ -275,7 +338,11 @@ onBeforeUnmount(() => {
       <span>元星联邦</span>
     </a>
 
-    <nav class="star-navigation" aria-label="首页章节导航">
+    <nav
+      class="star-navigation"
+      aria-label="首页章节导航"
+      :inert="introLocked ? '' : null"
+    >
       <a
         v-for="(item, index) in navigationTargets"
         :key="item.id"
@@ -303,11 +370,11 @@ onBeforeUnmount(() => {
           :get-navigation-targets="getNavigationTargets"
           @light-update="updateWordmarkLight"
           @scene-ready="handleSceneReady"
-          @scene-error="sceneFailed = true"
+          @scene-error="handleSceneError"
         />
         <BrandWordmark ref="wordmarkRef" :travel-style="wordmarkStyle" />
       </section>
-      <div class="page-content">
+      <div class="page-content" :inert="introLocked ? '' : null">
         <Content />
       </div>
     </main>
@@ -315,5 +382,7 @@ onBeforeUnmount(() => {
     <main v-else class="page-content page-content--article">
       <Content />
     </main>
+
+    <div v-if="isHome && introLocked" class="intro-input-lock" aria-hidden="true" />
   </div>
 </template>
