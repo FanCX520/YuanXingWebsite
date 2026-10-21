@@ -300,8 +300,12 @@ function updateLayout() {
   const track = trackRef.value
   if (!viewport || !track) return
 
-  const cardWidth = Math.min(500, Math.max(240, viewport.clientWidth - 16))
-  track.style.setProperty('--carousel-card-width', `${cardWidth}px`)
+  const sidePeek = Math.min(Math.max(viewport.clientWidth * 0.08, 28), 44)
+  const cardWidth = Math.min(
+    500,
+    Math.max(240, viewport.clientWidth - sidePeek * 2)
+  )
+  track.style.setProperty('--carousel-card-width', `${cardWidth.toFixed(2)}px`)
 
   const firstCard = cardElements.get(0)
   if (!firstCard) return
@@ -447,9 +451,13 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 680px) {
+  .game-carousel {
+    width: calc(100% + var(--page-inline) * 2);
+    margin-inline: calc(var(--page-inline) * -1);
+  }
+
   .game-carousel__viewport {
     padding-block: 24px 34px;
   }
-
 }
 </style>
