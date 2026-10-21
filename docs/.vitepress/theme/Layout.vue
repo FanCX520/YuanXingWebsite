@@ -28,7 +28,7 @@ const isHome = computed(() => {
   return typeof window !== 'undefined' && window.location.pathname === '/'
 })
 
-usePageSectionSnap({ enabled: isHome })
+const { scrollToSection } = usePageSectionSnap({ enabled: isHome })
 
 const brandProgress = computed(() => {
   const progress = scrollProgress.value
@@ -174,6 +174,26 @@ function updateActiveSection() {
   activeSection.value = section?.dataset.section ?? ''
 }
 
+function handleSectionNavigation(event, item) {
+  if (
+    !isHome.value ||
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return
+  }
+
+  const target = document.getElementById(item.id)
+  if (!target) return
+
+  event.preventDefault()
+  event.stopPropagation()
+  scrollToSection(target, item.href)
+}
+
 function scheduleViewportUpdate() {
   if (scrollFrame) return
   scrollFrame = window.requestAnimationFrame(() => {
@@ -265,6 +285,7 @@ onBeforeUnmount(() => {
         :style="item.style"
         :data-section-link="item.id"
         :aria-current="item.active ? 'location' : undefined"
+        @click="handleSectionNavigation($event, item)"
       >
         <span v-if="!isHome || sceneFailed" class="star-navigation__fallback" aria-hidden="true">✦</span>
         <span class="star-navigation__label">{{ item.label }}</span>

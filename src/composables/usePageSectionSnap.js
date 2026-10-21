@@ -5,6 +5,8 @@ const IDLE_DELAY = 180
 const SNAP_MIN_DURATION = 380
 const SNAP_MAX_DURATION = 650
 const SNAP_DURATION_PER_PIXEL = 1.2
+const NAV_MIN_DURATION = 420
+const NAV_MAX_DURATION = 760
 const SCROLL_KEYS = new Set([
   'ArrowUp',
   'ArrowDown',
@@ -93,14 +95,14 @@ export function usePageSectionSnap({ enabled }) {
     startSnap(nearest)
   }
 
-  function startSnap(target) {
+  function startSnap(target, minDuration = SNAP_MIN_DURATION, maxDuration = SNAP_MAX_DURATION) {
     finishSnap()
 
     const start = window.scrollY
     const distance = target - start
     const duration = Math.min(
-      Math.max(Math.abs(distance) * SNAP_DURATION_PER_PIXEL, SNAP_MIN_DURATION),
-      SNAP_MAX_DURATION
+      Math.max(Math.abs(distance) * SNAP_DURATION_PER_PIXEL, minDuration),
+      maxDuration
     )
     const startedAt = window.performance.now()
     const token = ++snapToken
@@ -126,6 +128,29 @@ export function usePageSectionSnap({ enabled }) {
     }
 
     snapFrame = window.requestAnimationFrame(step)
+  }
+
+  function scrollToSection(target, href) {
+    if (!enabled.value) return false
+
+    const element =
+      typeof target === 'string' ? document.querySelector(target) : target
+    if (!element) return false
+
+    clearIdleTimer()
+    finishSnap()
+    if (href) window.history.pushState(null, '', href)
+
+    const destination = getDocumentTop(element)
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    if (reducedMotion || Math.abs(destination - window.scrollY) <= 1) {
+      window.scrollTo({ top: destination, behavior: 'auto' })
+      return true
+    }
+
+    startSnap(destination, NAV_MIN_DURATION, NAV_MAX_DURATION)
+    return true
   }
 
   function handleScroll() {
@@ -183,4 +208,6 @@ export function usePageSectionSnap({ enabled }) {
     finishSnap()
     clearIdleTimer()
   })
+
+  return { scrollToSection }
 }
