@@ -11,11 +11,14 @@ body {
   background: var(--bg);
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 html.intro-locked,
 html.intro-locked body {
   overflow: hidden;
   overscroll-behavior: none;
-  scrollbar-gutter: stable;
 }
 
 .intro-input-lock {
