@@ -29,8 +29,19 @@ const { target, ready, revealed } = useSectionReveal()
 
 <style scoped>
 .home-section {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100svh;
   padding-inline: var(--page-inline);
-  scroll-margin-top: 88px;
+  padding-block: clamp(104px, 13svh, 144px) clamp(96px, 12svh, 128px);
+  scroll-margin-top: 0;
+}
+
+.home-section h2 {
+  padding: 0 0 clamp(22px, 4svh, 36px);
 }
 
 .home-section--ready {

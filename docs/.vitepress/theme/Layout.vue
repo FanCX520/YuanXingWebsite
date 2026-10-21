@@ -15,6 +15,7 @@ const heroAnchorRef = ref(null)
 const wordmarkRef = ref(null)
 const sceneFailed = ref(false)
 const scrollProgress = ref(0)
+const activeSection = ref('')
 const viewport = ref({ width: 1440, height: 900 })
 let introModule = null
 let introHandle = null
@@ -62,6 +63,7 @@ const navigationTargets = computed(() => {
       id: section.id,
       label: section.label,
       href: withBase(`/#${section.id}`),
+      active: isHome.value && activeSection.value === section.id,
       x,
       y,
       style: {
@@ -152,12 +154,29 @@ function updateScrollState() {
   )
 }
 
+function updateActiveSection() {
+  if (!isHome.value) {
+    activeSection.value = ''
+    return
+  }
+
+  const activationLine = window.innerHeight * 0.5
+  const section = Array.from(document.querySelectorAll('.home-section'))
+    .find((element) => {
+      const bounds = element.getBoundingClientRect()
+      return bounds.top <= activationLine && bounds.bottom > activationLine
+    })
+
+  activeSection.value = section?.dataset.section ?? ''
+}
+
 function scheduleViewportUpdate() {
   if (scrollFrame) return
   scrollFrame = window.requestAnimationFrame(() => {
     scrollFrame = 0
     updateViewport()
     updateScrollState()
+    updateActiveSection()
   })
 }
 
@@ -193,6 +212,7 @@ onMounted(async () => {
   window.addEventListener('resize', scheduleViewportUpdate)
   updateViewport()
   updateScrollState()
+  updateActiveSection()
 
   introModule = await import('../../../src/intro/intro.js')
   introModule.applyIntroFallback()
@@ -236,9 +256,11 @@ onBeforeUnmount(() => {
         v-for="(item, index) in navigationTargets"
         :key="item.id"
         class="star-navigation__link"
+        :class="{ 'is-active': item.active }"
         :href="item.href"
         :style="item.style"
         :data-section-link="item.id"
+        :aria-current="item.active ? 'location' : undefined"
       >
         <span v-if="!isHome || sceneFailed" class="star-navigation__fallback" aria-hidden="true">✦</span>
         <span class="star-navigation__label">{{ item.label }}</span>
