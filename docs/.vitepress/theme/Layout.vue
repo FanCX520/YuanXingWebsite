@@ -53,6 +53,8 @@ const sectionPositions = {
   games: { desktop: { x: 0.84, y: 0.39 }, mobile: { x: 0.87, y: 0.54 } },
   links: { desktop: { x: 0.2, y: 0.76 }, mobile: { x: 0.5, y: 0.79 } }
 }
+const desktopNavigationCenterY = 45
+const mobileNavigationCenterOffset = 64
 
 const sections = [...(homeSections || [])]
   .filter((section) => sectionPositions[section.id])
@@ -71,11 +73,15 @@ const navigationTargets = computed(() => {
 
   return sections.map((section, index) => {
     const scattered = mobile ? section.scattered.mobile : section.scattered.desktop
-    const settled = mobile
-      ? { x: (index + 0.5) / sections.length, y: 0.91 }
-      : { x: (width - 388 + index * 124) / width, y: 0.06 }
-    const x = lerp(scattered.x, settled.x, easedProgress)
-    const y = lerp(scattered.y, settled.y, easedProgress)
+    const settledX = mobile
+      ? (index + 0.5) / sections.length
+      : (width - 388 + index * 124) / width
+    const settledY = mobile
+      ? height - mobileNavigationCenterOffset
+      : desktopNavigationCenterY
+    const x = lerp(scattered.x, settledX, easedProgress)
+    const yPixels = lerp(scattered.y * height, settledY, easedProgress)
+    const y = yPixels / height
 
     return {
       id: section.id,
@@ -86,7 +92,7 @@ const navigationTargets = computed(() => {
       y,
       style: {
         left: `${x * width}px`,
-        top: `${y * height}px`
+        top: `${yPixels}px`
       }
     }
   })
