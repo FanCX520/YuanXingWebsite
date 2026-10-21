@@ -341,9 +341,14 @@ onBeforeUnmount(() => {
       <span>元星联邦</span>
     </a>
 
+    <div
+      class="star-navigation-glass"
+      :class="{ 'star-navigation-glass--visible': navigationSettled }"
+      aria-hidden="true"
+    />
+
     <nav
       class="star-navigation"
-      :class="{ 'star-navigation--settled': navigationSettled }"
       aria-label="首页章节导航"
       :inert="introLocked ? '' : null"
     >
@@ -359,7 +364,7 @@ onBeforeUnmount(() => {
         @click="handleSectionNavigation($event, item)"
       >
         <span
-          v-if="!isHome || sceneFailed || navigationSettled"
+          v-if="!isHome || sceneFailed"
           class="star-navigation__fallback"
           aria-hidden="true"
         >

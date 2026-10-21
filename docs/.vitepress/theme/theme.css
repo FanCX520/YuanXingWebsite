@@ -82,14 +82,14 @@ html.intro-locked body {
 
 .star-navigation {
   position: fixed;
-  z-index: 30;
+  z-index: 32;
   inset: 0;
   pointer-events: none;
 }
 
-.star-navigation::before {
+.star-navigation-glass {
   position: fixed;
-  z-index: 0;
+  z-index: 29;
   top: 12px;
   right: clamp(20px, 2vw, 28px);
   left: clamp(20px, 2vw, 28px);
@@ -112,7 +112,7 @@ html.intro-locked body {
   transition: opacity 220ms ease;
 }
 
-.star-navigation--settled::before {
+.star-navigation-glass--visible {
   opacity: 1;
 }
 
@@ -176,10 +176,11 @@ html.intro-locked body {
 
 .home-hero {
   position: relative;
-  z-index: 2;
+  z-index: 31;
   min-height: 100vh;
   min-height: 100svh;
   isolation: isolate;
+  pointer-events: none;
 }
 
 .site-shell--home .page-content {
@@ -336,7 +337,7 @@ html.intro-locked body {
 }
 
 @media (max-width: 680px) {
-  .star-navigation::before {
+  .star-navigation-glass {
     top: auto;
     right: 12px;
     bottom: 12px;
@@ -486,7 +487,7 @@ html.intro-locked body {
     transition: none;
   }
 
-  .star-navigation::before {
+  .star-navigation-glass {
     transition: none;
   }
 }
