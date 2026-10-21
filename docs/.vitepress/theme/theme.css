@@ -54,6 +54,23 @@ html.intro-locked body {
   pointer-events: auto;
 }
 
+.brand-home--ready::before {
+  position: absolute;
+  top: 50%;
+  left: 27px;
+  color: var(--star-warm);
+  content: '✦';
+  font-size: 1.45rem;
+  line-height: 1;
+  text-shadow:
+    0 0 4px rgba(255, 255, 245, 0.98),
+    0 0 12px rgba(255, 240, 174, 0.95),
+    0 0 26px rgba(255, 236, 173, 0.7),
+    0 0 38px rgba(107, 159, 255, 0.45);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
 .brand-home:focus-visible {
   outline: 2px solid #b8d8ff;
   outline-offset: 4px;
@@ -170,8 +187,46 @@ html.intro-locked body {
 }
 
 .star-navigation__fallback {
+  position: relative;
+  z-index: 2;
   font-size: 1.7rem;
-  text-shadow: 0 0 10px rgba(255, 236, 173, 0.9), 0 0 24px rgba(110, 166, 255, 0.75);
+  isolation: isolate;
+  text-shadow:
+    0 0 4px rgba(255, 255, 245, 0.98),
+    0 0 12px rgba(255, 240, 174, 0.95),
+    0 0 26px rgba(255, 236, 173, 0.72),
+    0 0 38px rgba(107, 159, 255, 0.48);
+}
+
+.star-navigation__fallback::before,
+.star-navigation__fallback::after {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 50%;
+  content: '';
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.star-navigation__fallback::before {
+  width: 52px;
+  height: 52px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 246, 205, 0.3) 0%,
+    rgba(255, 236, 173, 0.14) 38%,
+    transparent 72%
+  );
+}
+
+.star-navigation__fallback::after {
+  width: 72px;
+  height: 72px;
+  background:
+    radial-gradient(ellipse 34px 2px at center, rgba(255, 252, 231, 0.72), transparent 70%),
+    radial-gradient(ellipse 2px 34px at center, rgba(255, 252, 231, 0.72), transparent 70%);
+  filter: drop-shadow(0 0 8px rgba(255, 240, 174, 0.72));
 }
 
 .home-hero {
