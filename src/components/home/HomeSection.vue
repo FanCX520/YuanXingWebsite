@@ -49,7 +49,7 @@ const { target, ready, revealed } = useSectionReveal()
 }
 
 .home-section--games {
-  padding-block: clamp(84px, 10svh, 108px) clamp(72px, 8svh, 92px);
+  padding-block: clamp(80px, 9svh, 104px) clamp(56px, 6svh, 72px);
 }
 
 .home-section--games h2 {

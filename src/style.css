@@ -5,6 +5,11 @@
   --ink-dim: #8b97b8;
   --accent: #5b8def;
   --accent-bright: #7ec8ff;
+  --star-warm: #fff0ae;
+  --star-warm-border: rgba(255, 240, 174, 0.68);
+  --star-warm-soft: rgba(255, 240, 174, 0.22);
+  --star-warm-inset: rgba(255, 240, 174, 0.08);
+  --star-blue-halo: rgba(107, 159, 255, 0.16);
   /* 开屏动画状态（由 src/intro/intro.js 驱动），默认值即黑场状态 */
   --intro-wordmark: 0.15;
   --intro-glow: 0;

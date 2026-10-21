@@ -10,8 +10,17 @@ const viewportRef = ref(null)
 const trackRef = ref(null)
 const activeIndex = ref(0)
 const cardElements = new Map()
+const SNAP_DELAY = 150
+const WHEEL_MULTIPLIER = 0.9
+const MAX_PENDING_DELTA = 240
 let updateFrame = 0
+let wheelFrame = 0
+let pendingWheelDelta = 0
+let snapTimer = 0
+let snapEndTimer = 0
 let resizeObserver = null
+let allowScrollSnap = false
+let isSnapping = false
 
 const activeGame = computed(() => props.games[activeIndex.value] ?? null)
 const progressLabel = computed(() => {
@@ -68,21 +77,157 @@ function scheduleCardUpdate() {
   updateFrame = window.requestAnimationFrame(updateCards)
 }
 
-function centerCard(index, behavior = 'smooth') {
+function clearSnapTimer() {
+  window.clearTimeout(snapTimer)
+  snapTimer = 0
+}
+
+function stopSnapAnimation() {
+  clearSnapTimer()
+  window.clearTimeout(snapEndTimer)
+  snapEndTimer = 0
+
+  const viewport = viewportRef.value
+  if (isSnapping && viewport) {
+    viewport.scrollTo({ left: viewport.scrollLeft, behavior: 'auto' })
+  }
+  isSnapping = false
+}
+
+function getCenteredScrollLeft(index) {
   const viewport = viewportRef.value
   const card = cardElements.get(clampIndex(index))
-  if (!viewport || !card) return
+  if (!viewport || !card) return null
 
   const viewportBounds = viewport.getBoundingClientRect()
   const cardBounds = card.getBoundingClientRect()
   const cardCenter = cardBounds.left + cardBounds.width / 2
   const viewportCenter = viewportBounds.left + viewportBounds.width / 2
+  return viewport.scrollLeft + cardCenter - viewportCenter
+}
+
+function centerCard(index, behavior = 'smooth') {
+  stopSnapAnimation()
+  allowScrollSnap = false
+
+  const viewport = viewportRef.value
+  const target = getCenteredScrollLeft(index)
+  if (!viewport || target === null) return
+
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   viewport.scrollTo({
-    left: viewport.scrollLeft + cardCenter - viewportCenter,
+    left: target,
     behavior: reducedMotion ? 'auto' : behavior
   })
+}
+
+function snapToNearestCard() {
+  snapTimer = 0
+  allowScrollSnap = false
+
+  const viewport = viewportRef.value
+  const target = getCenteredScrollLeft(activeIndex.value)
+  if (!viewport || target === null) return
+  if (Math.abs(target - viewport.scrollLeft) < 1) return
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  isSnapping = true
+  viewport.scrollTo({
+    left: target,
+    behavior: reducedMotion ? 'auto' : 'smooth'
+  })
+
+  if (reducedMotion) {
+    isSnapping = false
+    return
+  }
+
+  window.clearTimeout(snapEndTimer)
+  snapEndTimer = window.setTimeout(() => {
+    snapEndTimer = 0
+    isSnapping = false
+  }, 700)
+}
+
+function scheduleSnap() {
+  if (!allowScrollSnap) return
+  clearSnapTimer()
+  snapTimer = window.setTimeout(snapToNearestCard, SNAP_DELAY)
+}
+
+function flushWheelDelta() {
+  wheelFrame = 0
+  const viewport = viewportRef.value
+  if (!viewport || !pendingWheelDelta) return
+
+  const maxScroll = Math.max(viewport.scrollWidth - viewport.clientWidth, 0)
+  const delta = pendingWheelDelta
+  pendingWheelDelta = 0
+  viewport.scrollLeft = Math.min(Math.max(viewport.scrollLeft + delta, 0), maxScroll)
+  scheduleCardUpdate()
+}
+
+function scheduleWheelFlush() {
+  if (wheelFrame) return
+  wheelFrame = window.requestAnimationFrame(flushWheelDelta)
+}
+
+function handleWheel(event) {
+  const viewport = viewportRef.value
+  if (!viewport || event.ctrlKey || event.metaKey) return
+
+  const deltaUnit =
+    event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientHeight : 1
+  const deltaX = event.deltaX * deltaUnit
+  const deltaY = event.deltaY * deltaUnit
+
+  if (Math.abs(deltaX) > Math.abs(deltaY) && deltaY === 0) {
+    allowScrollSnap = true
+    scheduleSnap()
+    return
+  }
+
+  if (!deltaY) return
+
+  const maxScroll = Math.max(viewport.scrollWidth - viewport.clientWidth, 0)
+  const projected = Math.min(
+    Math.max(viewport.scrollLeft + pendingWheelDelta, 0),
+    maxScroll
+  )
+  const atStart = deltaY < 0 && projected <= 1
+  const atEnd = deltaY > 0 && projected >= maxScroll - 1
+  if (atStart || atEnd) return
+
+  event.preventDefault()
+  stopSnapAnimation()
+  allowScrollSnap = true
+
+  const delta = Math.min(Math.max(deltaY * WHEEL_MULTIPLIER, -MAX_PENDING_DELTA), MAX_PENDING_DELTA)
+  pendingWheelDelta = Math.min(
+    Math.max(pendingWheelDelta + delta, -MAX_PENDING_DELTA),
+    MAX_PENDING_DELTA
+  )
+
+  scheduleWheelFlush()
+  scheduleSnap()
+}
+
+function handlePointerDown(event) {
+  if (event.pointerType === 'mouse') return
+  allowScrollSnap = true
+}
+
+function handleViewportScroll() {
+  scheduleCardUpdate()
+  scheduleSnap()
+}
+
+function handleScrollEnd() {
+  if (!isSnapping) return
+  window.clearTimeout(snapEndTimer)
+  snapEndTimer = 0
+  isSnapping = false
 }
 
 function moveBy(offset) {
@@ -131,21 +276,34 @@ onMounted(async () => {
   const viewport = viewportRef.value
   if (!viewport) return
 
-  viewport.addEventListener('scroll', scheduleCardUpdate, { passive: true })
+  viewport.addEventListener('scroll', handleViewportScroll, { passive: true })
+  viewport.addEventListener('wheel', handleWheel, { passive: false })
+  viewport.addEventListener('pointerdown', handlePointerDown, { passive: true })
+  viewport.addEventListener('scrollend', handleScrollEnd, { passive: true })
   resizeObserver = new ResizeObserver(updateLayout)
   resizeObserver.observe(viewport)
   updateLayout()
 })
 
 onBeforeUnmount(() => {
-  viewportRef.value?.removeEventListener('scroll', scheduleCardUpdate)
+  viewportRef.value?.removeEventListener('scroll', handleViewportScroll)
+  viewportRef.value?.removeEventListener('wheel', handleWheel)
+  viewportRef.value?.removeEventListener('pointerdown', handlePointerDown)
+  viewportRef.value?.removeEventListener('scrollend', handleScrollEnd)
   resizeObserver?.disconnect()
   resizeObserver = null
   cardElements.clear()
+  clearSnapTimer()
+  window.clearTimeout(snapEndTimer)
 
   if (updateFrame) {
     window.cancelAnimationFrame(updateFrame)
     updateFrame = 0
+  }
+
+  if (wheelFrame) {
+    window.cancelAnimationFrame(wheelFrame)
+    wheelFrame = 0
   }
 })
 </script>
@@ -216,7 +374,7 @@ onBeforeUnmount(() => {
 .game-carousel__viewport {
   overflow-x: auto;
   overflow-y: hidden;
-  padding-block: 20px 22px;
+  padding-block: 30px 38px;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
 }
@@ -317,7 +475,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 680px) {
   .game-carousel__viewport {
-    padding-block: 22px 26px;
+    padding-block: 24px 34px;
   }
 
   .game-carousel__controls {

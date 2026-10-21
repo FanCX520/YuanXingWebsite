@@ -64,15 +64,29 @@ const statusLabel = computed(
     linear-gradient(145deg, rgba(12, 24, 55, 0.96), rgba(4, 9, 24, 0.94)),
     rgba(4, 8, 24, 0.9);
   box-shadow:
-    0 24px 70px rgba(0, 0, 0, 0.36),
+    0 18px 48px rgba(0, 0, 0, 0.34),
     inset 0 1px 0 rgba(217, 232, 255, 0.06);
   color: var(--ink);
   text-decoration: none;
   transition: border-color 180ms ease, box-shadow 180ms ease;
 }
 
+.game-card__link::before {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px var(--star-warm-border),
+    inset 0 0 18px var(--star-warm-inset);
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+}
+
 .game-card__link::after {
   position: absolute;
+  z-index: 1;
   inset: 0;
   background: rgba(1, 5, 16, 0.54);
   content: '';
@@ -81,16 +95,26 @@ const statusLabel = computed(
 }
 
 .game-card__link[aria-current='true'] {
-  border-color: rgba(164, 207, 255, 0.72);
+  border-color: var(--star-warm-border);
   box-shadow:
-    0 28px 86px rgba(29, 88, 190, 0.3),
-    0 0 28px rgba(109, 170, 255, 0.14),
-    inset 0 1px 0 rgba(226, 240, 255, 0.12);
+    0 0 18px var(--star-warm-soft),
+    0 0 32px var(--star-blue-halo),
+    0 18px 48px rgba(0, 0, 0, 0.34),
+    inset 0 0 18px var(--star-warm-inset);
+}
+
+.game-card__link[aria-current='true']::before {
+  opacity: 1;
 }
 
 .game-card__link:hover,
 .game-card__link:focus-visible {
   border-color: rgba(196, 225, 255, 0.92);
+}
+
+.game-card__link[aria-current='true']:hover,
+.game-card__link[aria-current='true']:focus-visible {
+  border-color: var(--star-warm);
 }
 
 .game-card__link:focus-visible {
@@ -133,9 +157,9 @@ const statusLabel = computed(
 }
 
 .game-card__placeholder {
-  color: #fff0ae;
+  color: var(--star-warm);
   font-size: 3.4rem;
-  text-shadow: 0 0 24px rgba(118, 172, 255, 0.8);
+  text-shadow: 0 0 24px var(--star-warm-soft);
 }
 
 .game-card__body {
@@ -163,7 +187,7 @@ const statusLabel = computed(
 
 .game-card__status {
   flex: none;
-  color: #f0dda1;
+  color: var(--star-warm);
   font-size: 0.75rem;
   letter-spacing: 0.1em;
 }
