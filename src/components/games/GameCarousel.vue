@@ -10,17 +10,20 @@ const viewportRef = ref(null)
 const trackRef = ref(null)
 const activeIndex = ref(0)
 const cardElements = new Map()
-const SNAP_DELAY = 150
+const SNAP_DELAY = 220
 const WHEEL_MULTIPLIER = 0.9
-const MAX_PENDING_DELTA = 240
+const MAX_WHEEL_STEP = 120
+const WHEEL_SMOOTHING = 14
 let updateFrame = 0
 let wheelFrame = 0
-let pendingWheelDelta = 0
+let wheelFrameTime = 0
+let targetScrollLeft = 0
 let snapTimer = 0
 let snapEndTimer = 0
 let resizeObserver = null
 let allowScrollSnap = false
 let isSnapping = false
+let isWheelAnimating = false
 
 const activeGame = computed(() => props.games[activeIndex.value] ?? null)
 const progressLabel = computed(() => {
@@ -82,6 +85,19 @@ function clearSnapTimer() {
   snapTimer = 0
 }
 
+function stopWheelAnimation() {
+  if (wheelFrame) {
+    window.cancelAnimationFrame(wheelFrame)
+    wheelFrame = 0
+  }
+
+  wheelFrameTime = 0
+  isWheelAnimating = false
+
+  const viewport = viewportRef.value
+  if (viewport) targetScrollLeft = viewport.scrollLeft
+}
+
 function stopSnapAnimation() {
   clearSnapTimer()
   window.clearTimeout(snapEndTimer)
@@ -107,6 +123,7 @@ function getCenteredScrollLeft(index) {
 }
 
 function centerCard(index, behavior = 'smooth') {
+  stopWheelAnimation()
   stopSnapAnimation()
   allowScrollSnap = false
 
@@ -125,6 +142,8 @@ function centerCard(index, behavior = 'smooth') {
 function snapToNearestCard() {
   snapTimer = 0
   allowScrollSnap = false
+  stopWheelAnimation()
+  updateCards()
 
   const viewport = viewportRef.value
   const target = getCenteredScrollLeft(activeIndex.value)
@@ -156,21 +175,35 @@ function scheduleSnap() {
   snapTimer = window.setTimeout(snapToNearestCard, SNAP_DELAY)
 }
 
-function flushWheelDelta() {
+function animateWheelScroll(timestamp) {
   wheelFrame = 0
   const viewport = viewportRef.value
-  if (!viewport || !pendingWheelDelta) return
+  if (!viewport || !isWheelAnimating) return
 
-  const maxScroll = Math.max(viewport.scrollWidth - viewport.clientWidth, 0)
-  const delta = pendingWheelDelta
-  pendingWheelDelta = 0
-  viewport.scrollLeft = Math.min(Math.max(viewport.scrollLeft + delta, 0), maxScroll)
+  if (!wheelFrameTime) wheelFrameTime = timestamp
+  const deltaTime = Math.min(Math.max((timestamp - wheelFrameTime) / 1000, 1 / 120), 0.05)
+  wheelFrameTime = timestamp
+
+  const current = viewport.scrollLeft
+  const distance = targetScrollLeft - current
+  if (Math.abs(distance) < 0.5) {
+    viewport.scrollLeft = targetScrollLeft
+    isWheelAnimating = false
+    wheelFrameTime = 0
+    scheduleCardUpdate()
+    return
+  }
+
+  const progress = 1 - Math.exp(-WHEEL_SMOOTHING * deltaTime)
+  viewport.scrollLeft = current + distance * progress
   scheduleCardUpdate()
+  wheelFrame = window.requestAnimationFrame(animateWheelScroll)
 }
 
-function scheduleWheelFlush() {
+function scheduleWheelAnimation() {
   if (wheelFrame) return
-  wheelFrame = window.requestAnimationFrame(flushWheelDelta)
+  isWheelAnimating = true
+  wheelFrame = window.requestAnimationFrame(animateWheelScroll)
 }
 
 function handleWheel(event) {
@@ -183,6 +216,7 @@ function handleWheel(event) {
   const deltaY = event.deltaY * deltaUnit
 
   if (Math.abs(deltaX) > Math.abs(deltaY) && deltaY === 0) {
+    stopWheelAnimation()
     allowScrollSnap = true
     scheduleSnap()
     return
@@ -191,10 +225,8 @@ function handleWheel(event) {
   if (!deltaY) return
 
   const maxScroll = Math.max(viewport.scrollWidth - viewport.clientWidth, 0)
-  const projected = Math.min(
-    Math.max(viewport.scrollLeft + pendingWheelDelta, 0),
-    maxScroll
-  )
+  if (!isWheelAnimating) targetScrollLeft = viewport.scrollLeft
+  const projected = Math.min(Math.max(targetScrollLeft, 0), maxScroll)
   const atStart = deltaY < 0 && projected <= 1
   const atEnd = deltaY > 0 && projected >= maxScroll - 1
   if (atStart || atEnd) return
@@ -203,17 +235,19 @@ function handleWheel(event) {
   stopSnapAnimation()
   allowScrollSnap = true
 
-  const delta = Math.min(Math.max(deltaY * WHEEL_MULTIPLIER, -MAX_PENDING_DELTA), MAX_PENDING_DELTA)
-  pendingWheelDelta = Math.min(
-    Math.max(pendingWheelDelta + delta, -MAX_PENDING_DELTA),
-    MAX_PENDING_DELTA
+  const delta = Math.min(
+    Math.max(deltaY * WHEEL_MULTIPLIER, -MAX_WHEEL_STEP),
+    MAX_WHEEL_STEP
   )
+  targetScrollLeft = Math.min(Math.max(targetScrollLeft + delta, 0), maxScroll)
 
-  scheduleWheelFlush()
+  scheduleWheelAnimation()
   scheduleSnap()
 }
 
 function handlePointerDown(event) {
+  stopWheelAnimation()
+  stopSnapAnimation()
   if (event.pointerType === 'mouse') return
   allowScrollSnap = true
 }
@@ -293,6 +327,7 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect()
   resizeObserver = null
   cardElements.clear()
+  stopWheelAnimation()
   clearSnapTimer()
   window.clearTimeout(snapEndTimer)
 
@@ -301,10 +336,6 @@ onBeforeUnmount(() => {
     updateFrame = 0
   }
 
-  if (wheelFrame) {
-    window.cancelAnimationFrame(wheelFrame)
-    wheelFrame = 0
-  }
 })
 </script>
 
