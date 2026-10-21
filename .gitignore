@@ -8,3 +8,6 @@ docs/.vitepress/cache/
 .env.*
 tools/
 .screenshots/
+AGENTS.md
+PROJECT_LOG.md
+PROJECT_PLAN.md
