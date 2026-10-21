@@ -1,0 +1,338 @@
+<script setup>
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import GameCarouselCard from './GameCarouselCard.vue'
+
+const props = defineProps({
+  games: { type: Array, default: () => [] }
+})
+
+const viewportRef = ref(null)
+const trackRef = ref(null)
+const activeIndex = ref(0)
+const cardElements = new Map()
+let updateFrame = 0
+let resizeObserver = null
+
+const activeGame = computed(() => props.games[activeIndex.value] ?? null)
+const progressLabel = computed(() => {
+  const current = String(activeIndex.value + 1).padStart(2, '0')
+  const total = String(props.games.length).padStart(2, '0')
+  return `${current} / ${total}`
+})
+
+function setCardRef(element, index) {
+  if (element) {
+    cardElements.set(index, element)
+    return
+  }
+
+  cardElements.delete(index)
+}
+
+function clampIndex(index) {
+  return Math.min(Math.max(index, 0), Math.max(props.games.length - 1, 0))
+}
+
+function updateCards() {
+  updateFrame = 0
+  const viewport = viewportRef.value
+  if (!viewport) return
+
+  const viewportBounds = viewport.getBoundingClientRect()
+  const viewportCenter = viewportBounds.left + viewportBounds.width / 2
+  let nearestIndex = 0
+  let nearestDistance = Number.POSITIVE_INFINITY
+
+  cardElements.forEach((card, index) => {
+    const bounds = card.getBoundingClientRect()
+    const distance = Math.abs(bounds.left + bounds.width / 2 - viewportCenter)
+    const depth = Math.min(distance / Math.max(bounds.width * 0.82, 1), 1)
+
+    if (distance < nearestDistance) {
+      nearestDistance = distance
+      nearestIndex = index
+    }
+
+    card.style.setProperty('--carousel-depth', depth.toFixed(3))
+    card.style.setProperty('--carousel-scale', (1 - depth * 0.18).toFixed(3))
+    card.style.setProperty('--carousel-y', `${(depth * 18).toFixed(1)}px`)
+    card.style.setProperty('--carousel-opacity', (1 - depth * 0.48).toFixed(3))
+    card.style.zIndex = String(100 - Math.round(depth * 50))
+  })
+
+  activeIndex.value = clampIndex(nearestIndex)
+}
+
+function scheduleCardUpdate() {
+  if (updateFrame) return
+  updateFrame = window.requestAnimationFrame(updateCards)
+}
+
+function centerCard(index, behavior = 'smooth') {
+  const viewport = viewportRef.value
+  const card = cardElements.get(clampIndex(index))
+  if (!viewport || !card) return
+
+  const viewportBounds = viewport.getBoundingClientRect()
+  const cardBounds = card.getBoundingClientRect()
+  const cardCenter = cardBounds.left + cardBounds.width / 2
+  const viewportCenter = viewportBounds.left + viewportBounds.width / 2
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+  viewport.scrollTo({
+    left: viewport.scrollLeft + cardCenter - viewportCenter,
+    behavior: reducedMotion ? 'auto' : behavior
+  })
+}
+
+function moveBy(offset) {
+  const nextIndex = clampIndex(activeIndex.value + offset)
+  centerCard(nextIndex)
+}
+
+function handleFocusIn(event) {
+  const slide = event.target.closest?.('[data-carousel-index]')
+  if (!slide) return
+
+  const index = Number(slide.dataset.carouselIndex)
+  if (!Number.isInteger(index)) return
+  centerCard(index)
+}
+
+function handleKeydown(event) {
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault()
+    moveBy(-1)
+  }
+
+  if (event.key === 'ArrowRight') {
+    event.preventDefault()
+    moveBy(1)
+  }
+}
+
+function updateLayout() {
+  const viewport = viewportRef.value
+  const track = trackRef.value
+  const firstCard = cardElements.get(0)
+  if (!viewport || !track || !firstCard) return
+
+  const edgeSpace = Math.max(16, (viewport.clientWidth - firstCard.offsetWidth) / 2)
+  track.style.setProperty('--carousel-inline-space', `${edgeSpace}px`)
+
+  window.requestAnimationFrame(() => {
+    updateCards()
+    centerCard(activeIndex.value, 'auto')
+  })
+}
+
+onMounted(async () => {
+  await nextTick()
+  const viewport = viewportRef.value
+  if (!viewport) return
+
+  viewport.addEventListener('scroll', scheduleCardUpdate, { passive: true })
+  resizeObserver = new ResizeObserver(updateLayout)
+  resizeObserver.observe(viewport)
+  updateLayout()
+})
+
+onBeforeUnmount(() => {
+  viewportRef.value?.removeEventListener('scroll', scheduleCardUpdate)
+  resizeObserver?.disconnect()
+  resizeObserver = null
+  cardElements.clear()
+
+  if (updateFrame) {
+    window.cancelAnimationFrame(updateFrame)
+    updateFrame = 0
+  }
+})
+</script>
+
+<template>
+  <div
+    class="game-carousel"
+    role="region"
+    aria-roledescription="carousel"
+    aria-label="汉化游戏列表"
+    @focusin="handleFocusIn"
+    @keydown="handleKeydown"
+  >
+    <div
+      ref="viewportRef"
+      class="game-carousel__viewport"
+      tabindex="0"
+    >
+      <ul ref="trackRef" class="game-carousel__track">
+        <li
+          v-for="(game, index) in games"
+          :key="game.url || game.id || game.title"
+          :ref="(element) => setCardRef(element, index)"
+          class="game-carousel__slide"
+          :class="{ 'is-active': index === activeIndex }"
+          :data-carousel-index="index"
+        >
+          <GameCarouselCard :game="game" :active="index === activeIndex" />
+        </li>
+      </ul>
+    </div>
+
+    <div v-if="games.length > 1" class="game-carousel__controls">
+      <button
+        type="button"
+        class="game-carousel__arrow"
+        :disabled="activeIndex === 0"
+        aria-label="上一个游戏"
+        @click="moveBy(-1)"
+      >
+        <span aria-hidden="true">←</span>
+      </button>
+      <span class="game-carousel__count" aria-hidden="true">{{ progressLabel }}</span>
+      <button
+        type="button"
+        class="game-carousel__arrow"
+        :disabled="activeIndex === games.length - 1"
+        aria-label="下一个游戏"
+        @click="moveBy(1)"
+      >
+        <span aria-hidden="true">→</span>
+      </button>
+    </div>
+
+    <p class="game-carousel__status" aria-live="polite">
+      {{ activeGame ? `当前游戏：${activeGame.title}` : '' }}
+    </p>
+  </div>
+</template>
+
+<style scoped>
+.game-carousel {
+  --carousel-card-width: min(500px, calc(100vw - 96px));
+  position: relative;
+  margin-top: clamp(10px, 2svh, 18px);
+}
+
+.game-carousel__viewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 20px 22px;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+
+.game-carousel__viewport::-webkit-scrollbar {
+  display: none;
+}
+
+.game-carousel__viewport:focus-visible {
+  outline: 2px solid rgba(184, 216, 255, 0.82);
+  outline-offset: -2px;
+}
+
+.game-carousel__track {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  align-items: flex-start;
+  gap: clamp(18px, 2.4vw, 28px);
+  margin: 0;
+  padding-inline: var(--carousel-inline-space, 24px);
+  list-style: none;
+}
+
+.game-carousel__slide {
+  --carousel-depth: 0;
+  --carousel-opacity: 1;
+  --carousel-scale: 1;
+  --carousel-y: 0px;
+  flex: 0 0 var(--carousel-card-width);
+  min-width: 0;
+  transform:
+    translate3d(0, var(--carousel-y), 0)
+    scale(var(--carousel-scale));
+  transform-origin: center top;
+  opacity: var(--carousel-opacity);
+}
+
+.game-carousel__slide.is-active {
+  z-index: 2;
+}
+
+.game-carousel__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 2px;
+}
+
+.game-carousel__arrow {
+  display: grid;
+  width: 48px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(157, 185, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(6, 12, 31, 0.76);
+  color: var(--site-blue);
+  font: inherit;
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, opacity 160ms ease;
+}
+
+.game-carousel__arrow:hover:not(:disabled),
+.game-carousel__arrow:focus-visible {
+  border-color: rgba(184, 216, 255, 0.82);
+  color: #eff6ff;
+}
+
+.game-carousel__arrow:focus-visible {
+  outline: 2px solid rgba(184, 216, 255, 0.82);
+  outline-offset: 3px;
+}
+
+.game-carousel__arrow:disabled {
+  cursor: default;
+  opacity: 0.32;
+}
+
+.game-carousel__count {
+  min-width: 74px;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.16em;
+  text-align: center;
+}
+
+.game-carousel__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 680px) {
+  .game-carousel__viewport {
+    padding-block: 22px 26px;
+  }
+
+  .game-carousel__controls {
+    gap: 12px;
+  }
+
+  .game-carousel__arrow {
+    width: 44px;
+    height: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-carousel__arrow {
+    transition: none;
+  }
+}
+</style>

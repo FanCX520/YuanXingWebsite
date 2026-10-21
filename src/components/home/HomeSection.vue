@@ -4,7 +4,8 @@ import { useSectionReveal } from '../../composables/useSectionReveal.js'
 
 const props = defineProps({
   id: { type: String, required: true },
-  title: { type: String, default: '' }
+  title: { type: String, default: '' },
+  variant: { type: String, default: 'default' }
 })
 
 const headingId = computed(() => `${props.id}-title`)
@@ -16,7 +17,10 @@ const { target, ready, revealed } = useSectionReveal()
     :id="id"
     ref="target"
     class="home-section"
-    :class="{ 'home-section--ready': ready, 'is-revealed': revealed }"
+    :class="[
+      `home-section--${variant}`,
+      { 'home-section--ready': ready, 'is-revealed': revealed }
+    ]"
     :aria-labelledby="headingId"
     :data-section="id"
   >
@@ -42,6 +46,14 @@ const { target, ready, revealed } = useSectionReveal()
 
 .home-section h2 {
   padding: 0 0 clamp(22px, 4svh, 36px);
+}
+
+.home-section--games {
+  padding-block: clamp(84px, 10svh, 108px) clamp(72px, 8svh, 92px);
+}
+
+.home-section--games h2 {
+  padding-bottom: clamp(18px, 3svh, 28px);
 }
 
 .home-section--ready {
