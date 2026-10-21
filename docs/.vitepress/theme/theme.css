@@ -294,7 +294,7 @@ body {
 
 @media (min-width: 681px) and (prefers-reduced-motion: no-preference) {
   html:has(.site-shell--home) {
-    scroll-snap-type: y proximity;
+    scroll-snap-type: y mandatory;
   }
 
   .home-hero,
