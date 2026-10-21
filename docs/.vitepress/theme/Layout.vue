@@ -6,6 +6,7 @@ import { Content } from 'vitepress/dist/client/app/components/Content.js'
 import BrandWordmark from '../../../src/components/BrandWordmark.vue'
 import SpaceBackdrop from '../../../src/components/SpaceBackdrop.vue'
 import { data as homeSections } from '../data/home.data.js'
+import { usePageSectionSnap } from '../../../src/composables/usePageSectionSnap.js'
 
 const LogoHero = defineAsyncComponent(() => import('../../../src/components/LogoHero.vue'))
 
@@ -26,6 +27,9 @@ const isHome = computed(() => {
   if (route.path === '/') return true
   return typeof window !== 'undefined' && window.location.pathname === '/'
 })
+
+usePageSectionSnap({ enabled: isHome })
+
 const brandProgress = computed(() => {
   const progress = scrollProgress.value
   return progress * progress * (3 - 2 * progress)

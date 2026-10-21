@@ -292,18 +292,6 @@ body {
   clear: both;
 }
 
-@media (min-width: 681px) and (prefers-reduced-motion: no-preference) {
-  html:has(.site-shell--home) {
-    scroll-snap-type: y proximity;
-  }
-
-  .home-hero,
-  .home-section {
-    scroll-snap-align: start;
-    scroll-snap-stop: normal;
-  }
-}
-
 @media (max-width: 680px) {
   .page-content img.image-left,
   .page-content img.image-right {
