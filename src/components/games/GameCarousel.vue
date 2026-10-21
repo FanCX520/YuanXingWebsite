@@ -26,11 +26,6 @@ let isSnapping = false
 let isWheelAnimating = false
 
 const activeGame = computed(() => props.games[activeIndex.value] ?? null)
-const progressLabel = computed(() => {
-  const current = String(activeIndex.value + 1).padStart(2, '0')
-  const total = String(props.games.length).padStart(2, '0')
-  return `${current} / ${total}`
-})
 
 function setCardRef(element, index) {
   if (element) {
@@ -367,28 +362,6 @@ onBeforeUnmount(() => {
       </ul>
     </div>
 
-    <div v-if="games.length > 1" class="game-carousel__controls">
-      <button
-        type="button"
-        class="game-carousel__arrow"
-        :disabled="activeIndex === 0"
-        aria-label="上一个游戏"
-        @click="moveBy(-1)"
-      >
-        <span aria-hidden="true">←</span>
-      </button>
-      <span class="game-carousel__count" aria-hidden="true">{{ progressLabel }}</span>
-      <button
-        type="button"
-        class="game-carousel__arrow"
-        :disabled="activeIndex === games.length - 1"
-        aria-label="下一个游戏"
-        @click="moveBy(1)"
-      >
-        <span aria-hidden="true">→</span>
-      </button>
-    </div>
-
     <p class="game-carousel__status" aria-live="polite">
       {{ activeGame ? `当前游戏：${activeGame.title}` : '' }}
     </p>
@@ -448,53 +421,6 @@ onBeforeUnmount(() => {
   z-index: 2;
 }
 
-.game-carousel__controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  margin-top: 2px;
-}
-
-.game-carousel__arrow {
-  display: grid;
-  width: 48px;
-  height: 42px;
-  place-items: center;
-  border: 1px solid rgba(157, 185, 255, 0.34);
-  border-radius: 999px;
-  background: rgba(6, 12, 31, 0.76);
-  color: var(--site-blue);
-  font: inherit;
-  font-size: 1.15rem;
-  cursor: pointer;
-  transition: border-color 160ms ease, color 160ms ease, opacity 160ms ease;
-}
-
-.game-carousel__arrow:hover:not(:disabled),
-.game-carousel__arrow:focus-visible {
-  border-color: rgba(184, 216, 255, 0.82);
-  color: #eff6ff;
-}
-
-.game-carousel__arrow:focus-visible {
-  outline: 2px solid rgba(184, 216, 255, 0.82);
-  outline-offset: 3px;
-}
-
-.game-carousel__arrow:disabled {
-  cursor: default;
-  opacity: 0.32;
-}
-
-.game-carousel__count {
-  min-width: 74px;
-  color: var(--site-muted);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.16em;
-  text-align: center;
-}
-
 .game-carousel__status {
   position: absolute;
   width: 1px;
@@ -509,19 +435,5 @@ onBeforeUnmount(() => {
     padding-block: 24px 34px;
   }
 
-  .game-carousel__controls {
-    gap: 12px;
-  }
-
-  .game-carousel__arrow {
-    width: 44px;
-    height: 40px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .game-carousel__arrow {
-    transition: none;
-  }
 }
 </style>
