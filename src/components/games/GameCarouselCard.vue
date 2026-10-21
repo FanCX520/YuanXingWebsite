@@ -42,13 +42,6 @@ const statusLabel = computed(
         <span class="game-card__name">{{ game.title }}</span>
         <span class="game-card__status">{{ statusLabel }}</span>
       </span>
-      <span v-if="game.description" class="game-card__description">
-        {{ game.description }}
-      </span>
-      <span class="game-card__action">
-        查看 Wiki
-        <span aria-hidden="true">↗</span>
-      </span>
     </span>
   </a>
 </template>
@@ -167,8 +160,9 @@ const statusLabel = computed(
   z-index: 1;
   display: flex;
   flex-direction: column;
-  min-height: 154px;
-  padding: 20px 22px 21px;
+  min-height: 86px;
+  justify-content: center;
+  padding: 18px 22px;
 }
 
 .game-card__header {
@@ -192,32 +186,10 @@ const statusLabel = computed(
   letter-spacing: 0.1em;
 }
 
-.game-card__description {
-  margin-top: 10px;
-  color: var(--site-muted);
-  line-height: 1.75;
-}
-
-.game-card__action {
-  display: inline-flex;
-  align-items: center;
-  align-self: flex-start;
-  gap: 7px;
-  margin-top: auto;
-  padding-top: 18px;
-  color: var(--site-blue);
-  font-size: 0.82rem;
-  letter-spacing: 0.08em;
-}
-
 @media (max-width: 680px) {
   .game-card__body {
-    min-height: 140px;
-    padding: 16px 18px 18px;
-  }
-
-  .game-card__description {
-    line-height: 1.65;
+    min-height: 78px;
+    padding: 15px 18px;
   }
 }
 
