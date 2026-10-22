@@ -90,11 +90,6 @@ html.intro-locked body {
   text-shadow: 0 0 16px rgba(255, 235, 161, 0.9);
 }
 
-.brand-home--three-stars .brand-home__star {
-  color: transparent;
-  text-shadow: none;
-}
-
 .star-navigation {
   position: fixed;
   z-index: 32;
