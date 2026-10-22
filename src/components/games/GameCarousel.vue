@@ -394,14 +394,12 @@ onMounted(async () => {
   viewport.addEventListener('scrollend', handleScrollEnd, { passive: true })
   resizeObserver = new ResizeObserver(updateLayout)
   resizeObserver.observe(viewport)
-  if (returningGameKey.value) {
-    applyLayout({
-      defer: false,
-      onReady: signalGameCarouselReady
-    })
-  } else {
-    updateLayout()
-  }
+  applyLayout({
+    defer: false,
+    onReady: returningGameKey.value
+      ? signalGameCarouselReady
+      : undefined
+  })
 })
 
 onBeforeUnmount(() => {

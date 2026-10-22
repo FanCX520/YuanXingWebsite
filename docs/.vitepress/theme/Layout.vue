@@ -2,7 +2,6 @@
 import {
   computed,
   defineAsyncComponent,
-  nextTick,
   onBeforeUnmount,
   onMounted,
   ref,
@@ -49,6 +48,7 @@ let introModule = null
 let introHandle = null
 let scrollFrame = 0
 let sceneReady = false
+let previousScrollRestoration = 'auto'
 
 const isHome = computed(() => {
   if (route.path === '/') return true
@@ -197,6 +197,24 @@ function updateActiveSection() {
     })
 
   activeSection.value = section?.dataset.section ?? ''
+}
+
+function scrollToCurrentHomeSection() {
+  const hash = route.hash?.slice(1)
+  let target = null
+
+  if (hash) {
+    try {
+      target = document.getElementById(decodeURIComponent(hash))
+    } catch {
+      target = document.getElementById(hash)
+    }
+  }
+
+  window.scrollTo({
+    top: target?.offsetTop ?? 0,
+    behavior: 'auto'
+  })
 }
 
 async function handleGameCatalogReturn() {
@@ -370,25 +388,26 @@ watch(isHome, async (home) => {
   }
 
   setIntroLock(true)
-  window.scrollTo({ top: 0, behavior: 'auto' })
-  await nextTick()
-  if (!isHome.value) return
+  scrollToCurrentHomeSection()
 
   if (!introModule) {
     introModule = await import('../../../src/intro/intro.js')
   }
+  if (!isHome.value) return
   introModule.applyIntroFallback()
   startIntroIfReady()
-})
+}, { flush: 'post' })
 
 onMounted(async () => {
+  previousScrollRestoration = window.history.scrollRestoration
+  window.history.scrollRestoration = 'manual'
   window.addEventListener('scroll', scheduleViewportUpdate, { passive: true })
   window.addEventListener('resize', scheduleViewportUpdate)
   updateViewport()
   updateScrollState()
   updateActiveSection()
   setIntroLock(isHome.value)
-  if (isHome.value) window.scrollTo({ top: 0, behavior: 'auto' })
+  if (isHome.value) scrollToCurrentHomeSection()
 
   if (isHome.value) {
     introModule = await import('../../../src/intro/intro.js')
@@ -407,6 +426,7 @@ onBeforeUnmount(() => {
   introHandle?.dispose()
   introHandle = null
   setIntroLock(false)
+  window.history.scrollRestoration = previousScrollRestoration
 })
 </script>
 
