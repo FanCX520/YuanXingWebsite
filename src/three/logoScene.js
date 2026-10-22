@@ -46,6 +46,10 @@ const OCTAGRAM = {
   radialSegments: 512,
   rings: 96
 }
+const POINTER_TILT = {
+  pitch: 0.18,
+  yaw: 0.28
+}
 // 八角轮廓由长针主星与 45° 短针星取并集，前后共用同一厚度场
 function buildStarEmblem(material) {
   const geometry = createSparkleOctagramGeometry({
@@ -270,11 +274,13 @@ export function createLogoScene(canvas, {
   }
 
   function onPointerMove(event) {
+    if (event.pointerType === 'touch') return
+
     const rect = canvas.getBoundingClientRect()
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1
     pointer.y = -(((event.clientY - rect.top) / rect.height) * 2 - 1)
-    targetTilt.y = pointer.x * 0.1
-    targetTilt.x = pointer.y * 0.08
+    targetTilt.y = pointer.x * POINTER_TILT.yaw
+    targetTilt.x = pointer.y * POINTER_TILT.pitch
   }
 
   function onPointerLeave() {
@@ -346,8 +352,9 @@ export function createLogoScene(canvas, {
 
   const ro = new ResizeObserver(resize)
   ro.observe(canvas.parentElement || canvas)
-  canvas.addEventListener('pointermove', onPointerMove)
-  canvas.addEventListener('pointerleave', onPointerLeave)
+  window.addEventListener('pointermove', onPointerMove, { passive: true })
+  window.addEventListener('blur', onPointerLeave)
+  document.documentElement.addEventListener('pointerleave', onPointerLeave)
   resize()
   tick()
 
@@ -358,8 +365,9 @@ export function createLogoScene(canvas, {
     destroy() {
       cancelAnimationFrame(frameId)
       ro.disconnect()
-      canvas.removeEventListener('pointermove', onPointerMove)
-      canvas.removeEventListener('pointerleave', onPointerLeave)
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('blur', onPointerLeave)
+      document.documentElement.removeEventListener('pointerleave', onPointerLeave)
 
       const geometries = new Set()
       root.traverse((object) => {
