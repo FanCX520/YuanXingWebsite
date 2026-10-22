@@ -126,15 +126,32 @@ const statusLabel = computed(
   min-height: 42%;
   padding: clamp(56px, 10vw, 96px) clamp(20px, 5vw, 42px)
     clamp(20px, 4vw, 34px);
+}
+
+.game-article-hero__meta::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
   background: linear-gradient(
     180deg,
     transparent,
     rgba(3, 7, 19, 0.68) 44%,
     rgba(3, 7, 19, 0.96)
   );
+  content: '';
+  opacity: 1;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+html.game-route-transitioning .game-article-hero__meta::before {
+  opacity: 0;
+  transition: none;
 }
 
 .game-article-hero__title {
+  position: relative;
+  z-index: 1;
   min-width: 0;
   margin: 0;
   color: #f4f8ff;
@@ -145,6 +162,8 @@ const statusLabel = computed(
 }
 
 .game-article-hero__status {
+  position: relative;
+  z-index: 1;
   flex: none;
   padding: 7px 12px;
   border: 1px solid rgba(255, 240, 174, 0.28);
