@@ -198,6 +198,7 @@ function handleNavigate(event) {
   width: 100%;
   aspect-ratio: 1920 / 1080;
   place-items: center;
+  border-radius: 13px;
   background:
     radial-gradient(circle at 50% 50%, rgba(75, 136, 230, 0.24), transparent 54%),
     rgba(4, 9, 24, 0.92);
