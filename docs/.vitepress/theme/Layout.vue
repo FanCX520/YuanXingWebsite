@@ -27,6 +27,7 @@ const sceneFailed = ref(false)
 const introLocked = ref(false)
 const routeLeaving = ref(false)
 const scrollProgress = ref(0)
+const logoReplacementProgress = ref(0)
 const activeSection = ref('')
 const viewport = ref({ width: 1440, height: 900 })
 let introModule = null
@@ -178,6 +179,24 @@ function updateScrollState() {
     Math.max(window.scrollY / Math.max(window.innerHeight * 0.62, 1), 0),
     1
   )
+  logoReplacementProgress.value = calculateLogoReplacementProgress()
+}
+
+function calculateLogoReplacementProgress() {
+  if (typeof window === 'undefined' || !isHome.value) return 0
+
+  const settleAt = window.innerHeight * 0.62
+  const hero = document.querySelector('.home-hero')
+  const sectionTop = hero
+    ? hero.getBoundingClientRect().bottom + window.scrollY
+    : window.innerHeight
+  const range = Math.max(sectionTop - settleAt, 1)
+
+  return Math.min(Math.max((window.scrollY - settleAt) / range, 0), 1)
+}
+
+function getMainLogoOpacity() {
+  return 1 - calculateLogoReplacementProgress()
 }
 
 function updateActiveSection() {
@@ -438,11 +457,20 @@ onBeforeUnmount(() => {
     <main v-if="isHome" class="home-page" :style="{ '--scroll-progress': scrollProgress }">
       <section class="home-hero" aria-labelledby="home-title">
         <div ref="heroAnchorRef" class="hero-logo-anchor" :style="heroAnchorStyle" />
+        <img
+          class="hero-logo-replacement"
+          :src="withBase('/images/brand/logo-mark.png')"
+          :style="[heroAnchorStyle, { opacity: logoReplacementProgress }]"
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+        />
         <LogoHero
           ref="logoHeroRef"
           class="home-hero__scene"
           :on-frame="updateSceneFrame"
           :get-logo-target="getLogoTarget"
+          :get-main-logo-opacity="getMainLogoOpacity"
           :get-navigation-targets="getNavigationTargets"
           @light-update="updateWordmarkLight"
           @scene-ready="handleSceneReady"

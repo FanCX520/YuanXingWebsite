@@ -27,6 +27,7 @@ const starFragmentShader = /* glsl */ `
   uniform float uTime;
   uniform float uIntro;
   uniform float uReveal;
+  uniform float uOpacity;
   varying vec3 vLocalPosition;
   varying vec3 vNormal;
   varying vec3 vViewDirection;
@@ -79,7 +80,7 @@ const starFragmentShader = /* glsl */ `
     // 开场：光从星心向外扩散，uReveal 为当前扩散半径
     float reveal = 1.0 - smoothstep(uReveal - 0.32, uReveal + 0.12, length(vLocalPosition.xy));
     color *= uIntro * mix(0.02, 1.0, reveal);
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(color, uOpacity);
   }
 `
 
@@ -89,6 +90,7 @@ const ribbonFragmentShader = /* glsl */ `
   uniform float uTime;
   uniform float uIntro;
   uniform float uReveal;
+  uniform float uOpacity;
   uniform vec3 uStarLightPosition;
   uniform vec3 uStarLightColor;
   uniform float uStarLightPower;
@@ -149,7 +151,7 @@ const ribbonFragmentShader = /* glsl */ `
     float ringSpan = abs(vUv.x - 0.5) * 2.0;
     float ringWave = 1.0 - smoothstep(uReveal - 0.22, uReveal, ringSpan);
     color *= uIntro * mix(0.03, 1.0, ringWave);
-    gl_FragColor = vec4(color, 1.0);
+    gl_FragColor = vec4(color, uOpacity);
   }
 `
 
@@ -158,6 +160,7 @@ const glowFragmentShader = /* glsl */ `
 
   uniform float uTime;
   uniform float uIntro;
+  uniform float uOpacity;
   varying vec3 vNormal;
   varying vec3 vViewDirection;
   varying vec3 vWorldPosition;
@@ -169,8 +172,8 @@ const glowFragmentShader = /* glsl */ `
     float breath = 0.82 + 0.3 * sin(uTime * ${MAIN_STAR_BREATH_SPEED.toFixed(6)} + 0.6);
     vec3 starColor = vec3(1.0, 0.94, 0.72);
     gl_FragColor = vec4(
-      starColor * fresnel * breath * uIntro,
-      fresnel * 0.46 * breath * uIntro
+      starColor * fresnel * breath * uIntro * uOpacity,
+      fresnel * 0.46 * breath * uIntro * uOpacity
     );
   }
 `
@@ -183,6 +186,7 @@ function createMaterial(fragmentShader) {
       uTime: { value: 0 },
       uIntro: { value: 0 },
       uReveal: { value: -0.2 },
+      uOpacity: { value: 1 },
       uStarLightPosition: { value: new THREE.Vector3() },
       uStarLightColor: { value: new THREE.Color(0xfff4d6) },
       uStarLightPower: { value: 1.5 },
@@ -190,6 +194,7 @@ function createMaterial(fragmentShader) {
       uStarLightDecay: { value: 2.0 }
     },
     side: THREE.DoubleSide,
+    transparent: true,
     depthWrite: true,
     depthTest: true
   })
@@ -203,6 +208,7 @@ function createGlowMaterial() {
     uniforms: {
       uTime: { value: 0 },
       uIntro: { value: 0 },
+      uOpacity: { value: 1 },
       uStarLightPosition: { value: new THREE.Vector3() },
       uStarLightColor: { value: new THREE.Color(0xfff4d6) },
       uStarLightPower: { value: 1.0 }

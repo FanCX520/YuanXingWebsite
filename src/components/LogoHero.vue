@@ -5,6 +5,7 @@ import { createLogoScene } from '../three/logoScene.js'
 const props = defineProps({
   onFrame: { type: Function, default: null },
   getLogoTarget: { type: Function, default: null },
+  getMainLogoOpacity: { type: Function, default: null },
   getNavigationTargets: { type: Function, default: null }
 })
 const emit = defineEmits(['light-update', 'scene-ready', 'scene-error'])
@@ -21,6 +22,7 @@ onMounted(() => {
       getLogoTarget: () => props.getLogoTarget?.() ?? null,
       onLightUpdate: (state) => emit('light-update', state),
       onFrame: (state) => props.onFrame?.(state),
+      getMainLogoOpacity: () => props.getMainLogoOpacity?.() ?? 1,
       getNavigationTargets: () => props.getNavigationTargets?.() ?? []
     })
     emit('scene-ready')

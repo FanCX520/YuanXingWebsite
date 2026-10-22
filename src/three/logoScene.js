@@ -126,6 +126,7 @@ export function createLogoScene(canvas, {
   onLightUpdate,
   onFrame,
   getLogoTarget,
+  getMainLogoOpacity,
   getNavigationTargets
 } = {}) {
   const renderer = new THREE.WebGLRenderer({
@@ -204,6 +205,7 @@ export function createLogoScene(canvas, {
     nav3: 0
   }
   const STAR_LIGHT_INTENSITY = starLight.intensity
+  let mainLogoOpacity = 1
 
   const pointer = { x: 0, y: 0 }
   const targetTilt = { x: 0, y: 0 }
@@ -219,11 +221,15 @@ export function createLogoScene(canvas, {
   const navigationEuler = new THREE.Euler()
 
   function applyIntro() {
+    mainLogoOpacity = THREE.MathUtils.clamp(getMainLogoOpacity?.() ?? 1, 0, 1)
     starMaterial.uniforms.uIntro.value = intro.star
     starMaterial.uniforms.uReveal.value = intro.starReveal
+    starMaterial.uniforms.uOpacity.value = mainLogoOpacity
     orbitMaterial.uniforms.uIntro.value = intro.ribbon
     orbitMaterial.uniforms.uReveal.value = intro.ringReveal
+    orbitMaterial.uniforms.uOpacity.value = mainLogoOpacity
     cosmicMaterials.starGlow.uniforms.uIntro.value = intro.glow
+    cosmicMaterials.starGlow.uniforms.uOpacity.value = mainLogoOpacity
     starLight.intensity = STAR_LIGHT_INTENSITY * intro.light
     bloom.setIntensity(intro.bloom)
     navigationField?.setIntro([intro.nav1, intro.nav2, intro.nav3])
@@ -306,7 +312,7 @@ export function createLogoScene(canvas, {
   function updateLogoFromTarget() {
     const target = getLogoTarget?.()
     if (!target) {
-      root.visible = true
+      root.visible = mainLogoOpacity > 0.001
       root.scale.setScalar(MODEL_SCALE)
       root.position.set(0, 0, 0)
       return
@@ -317,7 +323,7 @@ export function createLogoScene(canvas, {
     if (!bounds.width || !bounds.height) return
 
     const visible = rect.bottom > 0 && rect.top < bounds.height && rect.right > 0 && rect.left < bounds.width
-    root.visible = visible
+    root.visible = visible && mainLogoOpacity > 0.001
     if (!visible) return
 
     const worldWidth = camera.right - camera.left
