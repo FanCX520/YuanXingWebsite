@@ -85,6 +85,13 @@ function getItemStyle(item) {
     />
   </a>
 
+  <div
+    v-if="!home || brandReady"
+    class="brand-glass"
+    :style="brandStyle"
+    aria-hidden="true"
+  />
+
   <BrandWordmark
     v-if="!home"
     :travel-style="wordmarkStyle"
@@ -165,6 +172,10 @@ function getItemStyle(item) {
   transform: scale(1.24);
   transform-origin: center;
   user-select: none;
+}
+
+.brand-glass {
+  display: none;
 }
 
 .star-navigation {
@@ -261,6 +272,25 @@ function getItemStyle(item) {
 }
 
 @media (max-width: 680px) {
+  .brand-glass {
+    position: fixed;
+    z-index: 2;
+    display: block;
+    border: 1px solid rgba(157, 185, 255, 0.18);
+    border-radius: 16px;
+    background: linear-gradient(
+      180deg,
+      rgba(9, 18, 42, 0.72),
+      rgba(5, 11, 28, 0.52)
+    );
+    box-shadow:
+      0 14px 44px rgba(1, 5, 18, 0.3),
+      inset 0 1px 0 rgba(217, 232, 255, 0.06);
+    backdrop-filter: blur(18px) saturate(125%);
+    -webkit-backdrop-filter: blur(18px) saturate(125%);
+    pointer-events: none;
+  }
+
   .star-navigation-glass {
     top: auto;
     right: 12px;
