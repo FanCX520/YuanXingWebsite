@@ -2,6 +2,7 @@
 import {
   computed,
   defineAsyncComponent,
+  nextTick,
   onBeforeUnmount,
   onMounted,
   ref,
@@ -16,6 +17,8 @@ import {
   beginGameReturn,
   endGameReturn,
   getGameCardKey,
+  readActiveGameKey,
+  rememberActiveGame,
   waitForGameCarouselReady
 } from '../../../src/components/games/gameCarouselState.js'
 import NavigationStarCanvas from '../../../src/components/navigation/NavigationStarCanvas.vue'
@@ -56,10 +59,19 @@ const isHome = computed(() => {
 })
 const isGamePage = computed(() => frontmatter.value?.type === 'game')
 
+watch(isGamePage, (gamePage) => {
+  if (gamePage && typeof window !== 'undefined') {
+    rememberActiveGame(getGameCardKey({ url: route.path }))
+  }
+}, { immediate: true })
+
 if (isHome.value) introLocked.value = true
 
 const { scrollToSection } = usePageSectionSnap({ enabled: isHome })
-const { navigate: navigateWithTransition } = useViewTransitionNavigation()
+const {
+  navigate: navigateWithTransition,
+  transitionExistingNavigation
+} = useViewTransitionNavigation()
 
 const brandProgress = computed(() => {
   if (!isHome.value) return 1
@@ -214,6 +226,56 @@ function scrollToCurrentHomeSection() {
   window.scrollTo({
     top: target?.offsetTop ?? 0,
     behavior: 'auto'
+  })
+}
+
+function waitForHomeRoute() {
+  if (isHome.value) return nextTick()
+
+  return new Promise((resolve) => {
+    let settled = false
+    let timeout = 0
+    let stop = null
+
+    const finish = async () => {
+      if (settled) return
+      settled = true
+      window.clearTimeout(timeout)
+      stop?.()
+      await nextTick()
+      resolve()
+    }
+
+    stop = watch(isHome, (home) => {
+      if (home) finish()
+    }, { flush: 'post' })
+    timeout = window.setTimeout(finish, 800)
+  })
+}
+
+function handleBrowserBack() {
+  if (gameReturnPending.value) return
+  if (window.location.pathname !== '/') return
+  if (!document.querySelector('.game-article-hero')) return
+
+  const gameKey = readActiveGameKey()
+  if (!gameKey) return
+
+  gameReturnPending.value = true
+  beginGameReturn(gameKey)
+  transitionExistingNavigation({
+    waitFor: async () => {
+      await waitForHomeRoute()
+      await waitForGameCarouselReady()
+    },
+    onFinished: () => {
+      endGameReturn()
+      gameReturnPending.value = false
+    }
+  }).finally(() => {
+    if (!gameReturnPending.value) return
+    endGameReturn()
+    gameReturnPending.value = false
   })
 }
 
@@ -401,6 +463,7 @@ watch(isHome, async (home) => {
 onMounted(async () => {
   previousScrollRestoration = window.history.scrollRestoration
   window.history.scrollRestoration = 'manual'
+  window.addEventListener('popstate', handleBrowserBack)
   window.addEventListener('scroll', scheduleViewportUpdate, { passive: true })
   window.addEventListener('resize', scheduleViewportUpdate)
   updateViewport()
@@ -420,6 +483,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('popstate', handleBrowserBack)
   window.removeEventListener('scroll', scheduleViewportUpdate)
   window.removeEventListener('resize', scheduleViewportUpdate)
   if (scrollFrame) window.cancelAnimationFrame(scrollFrame)
