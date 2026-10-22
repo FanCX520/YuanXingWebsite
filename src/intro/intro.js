@@ -6,6 +6,7 @@ engine.useDefaultMainLoop = false
 
 const INTRO_PARAM = new URLSearchParams(window.location.search).get('intro')
 const FREEZE_SECONDS = INTRO_PARAM?.startsWith('freeze-') ? Number(INTRO_PARAM.slice(7)) : null
+const INTRO_SEEN_KEY = 'yuanxing:intro-seen'
 
 // 场景侧：星核扩散半径 / 环带光波半径 / 星体与环带亮度 / 光晕 / 点光源 / 泛光 / 交互动效强度
 const SCENE_START = {
@@ -61,6 +62,28 @@ const SAFETY_TIMEOUT = 9000
 
 const rootStyle = document.documentElement.style
 
+function hasSeenIntro() {
+  try {
+    return window.sessionStorage.getItem(INTRO_SEEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function rememberIntro() {
+  try {
+    window.sessionStorage.setItem(INTRO_SEEN_KEY, '1')
+  } catch {
+    // 存储不可用时仍允许本次播放，不阻断开场流程
+  }
+}
+
+function shouldPlayIntro(reducedMotion) {
+  if (INTRO_PARAM === 'off' || reducedMotion) return false
+  if (INTRO_PARAM === 'on') return true
+  return !hasSeenIntro()
+}
+
 function writeCss(values) {
   Object.entries(values).forEach(([name, value]) => rootStyle.setProperty(name, value))
 }
@@ -76,12 +99,12 @@ export function updateIntroEngine() {
 /** 在首帧渲染前写入开场初始值；不支持动画的环境直接写终态 */
 export function applyIntroFallback() {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  writeCss(INTRO_PARAM === 'off' || reduced ? CSS_END : CSS_START)
+  writeCss(shouldPlayIntro(reduced) ? CSS_START : CSS_END)
 }
 
 export function initIntro({ scene, onComplete }) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const disabled = INTRO_PARAM === 'off' || reduced
+  const disabled = !shouldPlayIntro(reduced)
 
   // WebGL 初始化失败时没有场景可驱动，直接给终态，避免黑屏卡死
   if (!scene || disabled) {
@@ -157,6 +180,7 @@ export function initIntro({ scene, onComplete }) {
     cleanup()
     onComplete?.()
   } else {
+    rememberIntro()
     timeline.play()
   }
 
