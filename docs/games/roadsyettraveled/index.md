@@ -10,10 +10,6 @@ cover: /images/games/未行之途.jpg
 draft: false
 ---
 
-# 未行之途
-
-**汉化状态：汉化中**
-
 Wiki 内容和截图待整理。
 
 ![未行之途图片](./images/未行之途.jpg){.image-left .image-wrap}

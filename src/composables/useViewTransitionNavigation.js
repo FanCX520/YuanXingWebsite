@@ -1,0 +1,59 @@
+import { nextTick } from 'vue'
+import { useRouter } from 'vitepress'
+
+const FALLBACK_FADE_MS = 140
+const ROUTE_FALLBACK_CLASS = 'route-fallback-leaving'
+
+export function useViewTransitionNavigation() {
+  const router = useRouter()
+  let navigating = false
+
+  async function navigate(href) {
+    if (navigating) return
+    navigating = true
+
+    const reducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)'
+    ).matches
+
+    if (reducedMotion) {
+      try {
+        await router.go(href)
+      } finally {
+        navigating = false
+      }
+      return
+    }
+
+    if (typeof document.startViewTransition === 'function') {
+      try {
+        const transition = document.startViewTransition(async () => {
+          await router.go(href)
+          await nextTick()
+        })
+        await transition.finished
+      } catch {
+        // 浏览器中止过渡时保留当前路由，不重复跳转
+      } finally {
+        navigating = false
+      }
+      return
+    }
+
+    document.documentElement.classList.add(ROUTE_FALLBACK_CLASS)
+    try {
+      await new Promise((resolve) => {
+        window.setTimeout(resolve, FALLBACK_FADE_MS)
+      })
+      await router.go(href)
+      await nextTick()
+    } finally {
+      window.requestAnimationFrame(() => {
+        document.documentElement.classList.remove(ROUTE_FALLBACK_CLASS)
+        navigating = false
+      })
+    }
+  }
+
+  return { navigate }
+}

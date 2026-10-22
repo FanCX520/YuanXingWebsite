@@ -8,10 +8,11 @@ import {
   ref,
   watch
 } from 'vue'
-import { useRoute, useRouter, withBase } from 'vitepress'
+import { useData, useRoute, useRouter, withBase } from 'vitepress'
 // 直接引用 Content，避免 data loader 与 VitePress 公共入口形成循环 chunk。
 import { Content } from 'vitepress/dist/client/app/components/Content.js'
 import BrandWordmark from '../../../src/components/BrandWordmark.vue'
+import GameArticleHero from '../../../src/components/games/GameArticleHero.vue'
 import NavigationStarCanvas from '../../../src/components/navigation/NavigationStarCanvas.vue'
 import SiteHeader from '../../../src/components/navigation/SiteHeader.vue'
 import SpaceBackdrop from '../../../src/components/SpaceBackdrop.vue'
@@ -23,6 +24,7 @@ const LogoHero = defineAsyncComponent(() => import('../../../src/components/Logo
 
 const route = useRoute()
 const router = useRouter()
+const { frontmatter } = useData()
 const logoHeroRef = ref(null)
 const heroAnchorRef = ref(null)
 const wordmarkRef = ref(null)
@@ -44,6 +46,7 @@ const isHome = computed(() => {
   if (route.path === '/') return true
   return typeof window !== 'undefined' && window.location.pathname === '/'
 })
+const isGamePage = computed(() => frontmatter.value?.type === 'game')
 
 if (isHome.value) introLocked.value = true
 
@@ -441,7 +444,15 @@ onBeforeUnmount(() => {
       </div>
     </main>
 
-    <main v-else class="page-content page-content--article">
+    <main
+      v-else
+      class="page-content page-content--article"
+      :class="{ 'page-content--game': isGamePage }"
+    >
+      <GameArticleHero
+        v-if="isGamePage"
+        :frontmatter="frontmatter"
+      />
       <Content />
     </main>
 

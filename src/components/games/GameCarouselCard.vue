@@ -1,22 +1,62 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { withBase } from 'vitepress'
+import { useViewTransitionNavigation } from '../../composables/useViewTransitionNavigation.js'
+import { getGameStatusLabel } from './gameStatus.js'
 
 const props = defineProps({
   game: { type: Object, required: true },
   active: { type: Boolean, default: false }
 })
 
-const statusLabels = {
-  planned: '计划中',
-  translating: '汉化中',
-  released: '已发布',
-  paused: '暂停'
-}
-
 const statusLabel = computed(
-  () => statusLabels[props.game.status] || props.game.status || '状态待补充'
+  () => getGameStatusLabel(props.game.status)
 )
+const transitionId = computed(() => {
+  const source = String(props.game.id || props.game.url || props.game.title)
+  return source.replace(/[^a-zA-Z0-9_-]/g, '-')
+})
+const coverTransitionName = computed(
+  () => `game-cover-${transitionId.value}`
+)
+const titleTransitionName = computed(
+  () => `game-title-${transitionId.value}`
+)
+const statusTransitionName = computed(
+  () => `game-status-${transitionId.value}`
+)
+const { navigate } = useViewTransitionNavigation()
+const coverElementRef = ref(null)
+const titleElementRef = ref(null)
+const statusElementRef = ref(null)
+
+function handleNavigate(event) {
+  if (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return
+  }
+
+  const transitionElements = [
+    [coverElementRef.value, coverTransitionName.value],
+    [titleElementRef.value, titleTransitionName.value],
+    [statusElementRef.value, statusTransitionName.value]
+  ]
+  transitionElements.forEach(([element, transitionName]) => {
+    element?.style.setProperty('view-transition-name', transitionName)
+  })
+
+  event.preventDefault()
+  navigate(withBase(props.game.url)).finally(() => {
+    transitionElements.forEach(([element]) => {
+      element?.style.removeProperty('view-transition-name')
+    })
+  })
+}
 </script>
 
 <template>
@@ -24,22 +64,41 @@ const statusLabel = computed(
     class="game-card__link"
     :href="withBase(game.url)"
     :aria-current="active ? 'true' : undefined"
+    @click="handleNavigate"
   >
     <span class="game-card__cover-frame">
       <img
         v-if="game.cover"
+        ref="coverElementRef"
         class="game-card__cover"
         :src="withBase(game.cover)"
         :alt="`${game.title} 封面`"
         loading="lazy"
         decoding="async"
       />
-      <span v-else class="game-card__placeholder" aria-hidden="true">✦</span>
+      <span
+        v-else
+        ref="coverElementRef"
+        class="game-card__placeholder"
+        aria-hidden="true"
+      >
+        ✦
+      </span>
 
       <span class="game-card__meta">
         <span class="game-card__header">
-          <span class="game-card__name">{{ game.title }}</span>
-          <span class="game-card__status">{{ statusLabel }}</span>
+          <span
+            ref="titleElementRef"
+            class="game-card__name"
+          >
+            {{ game.title }}
+          </span>
+          <span
+            ref="statusElementRef"
+            class="game-card__status"
+          >
+            {{ statusLabel }}
+          </span>
         </span>
       </span>
     </span>
