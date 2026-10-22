@@ -113,6 +113,15 @@ defineExpose({ updateLight })
   mask-image: none;
 }
 
+.brand-wordmark--settled {
+  --intro-glow: 1;
+  --intro-shift: 0;
+  --intro-spread: 1.25;
+  --light-x: 2%;
+  --light-y: -44%;
+  --light-opacity: 1;
+}
+
 .brand-wordmark__glow {
   position: absolute;
   inset: 0;
