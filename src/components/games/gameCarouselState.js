@@ -1,7 +1,21 @@
+import { ref } from 'vue'
+
 const ACTIVE_GAME_KEY = 'yuanxing:active-game'
+const RETURN_READY_TIMEOUT = 900
+
+export const returningGameKey = ref('')
+
+let resolveReturnReady = null
+let returnReadyPromise = Promise.resolve()
 
 export function getGameCardKey(game) {
-  return game?.url || game?.id || game?.title || ''
+  const gameKey = game?.url || game?.id || game?.title || ''
+
+  try {
+    return decodeURI(gameKey)
+  } catch {
+    return gameKey
+  }
 }
 
 export function readActiveGameKey() {
@@ -20,4 +34,31 @@ export function rememberActiveGame(gameKey) {
   } catch {
     // 存储不可用时保持当前会话行为
   }
+}
+
+export function beginGameReturn(gameKey) {
+  returningGameKey.value = gameKey
+  returnReadyPromise = new Promise((resolve) => {
+    resolveReturnReady = resolve
+  })
+}
+
+export function waitForGameCarouselReady() {
+  const timeout = new Promise((resolve) => {
+    window.setTimeout(resolve, RETURN_READY_TIMEOUT)
+  })
+
+  return Promise.race([returnReadyPromise, timeout])
+}
+
+export function signalGameCarouselReady() {
+  const resolve = resolveReturnReady
+  resolveReturnReady = null
+  resolve?.()
+}
+
+export function endGameReturn() {
+  returningGameKey.value = ''
+  resolveReturnReady = null
+  returnReadyPromise = Promise.resolve()
 }

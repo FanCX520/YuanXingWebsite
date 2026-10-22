@@ -4,7 +4,9 @@ import GameCarouselCard from './GameCarouselCard.vue'
 import {
   getGameCardKey,
   readActiveGameKey,
-  rememberActiveGame
+  rememberActiveGame,
+  returningGameKey,
+  signalGameCarouselReady
 } from './gameCarouselState.js'
 
 const props = defineProps({
@@ -329,7 +331,7 @@ function handleKeydown(event) {
   }
 }
 
-function updateLayout() {
+function updateLayout(onReady) {
   const viewport = viewportRef.value
   const track = trackRef.value
   if (!viewport || !track) return
@@ -350,6 +352,9 @@ function updateLayout() {
   window.requestAnimationFrame(() => {
     centerCard(activeIndex.value, 'auto')
     scheduleCardUpdate()
+    if (typeof onReady === 'function') {
+      window.requestAnimationFrame(onReady)
+    }
   })
 }
 
@@ -358,11 +363,14 @@ onMounted(async () => {
   const viewport = viewportRef.value
   if (!viewport) return
 
-  const savedGameKey = readActiveGameKey()
+  const savedGameKey = returningGameKey.value || readActiveGameKey()
   const savedIndex = props.games.findIndex(
     (game) => getGameCardKey(game) === savedGameKey
   )
-  if (savedIndex >= 0) activeIndex.value = savedIndex
+  if (savedIndex >= 0) {
+    activeIndex.value = savedIndex
+    rememberActiveGame(savedGameKey)
+  }
 
   viewport.addEventListener('scroll', handleViewportScroll, { passive: true })
   viewport.addEventListener('wheel', handleWheel, { passive: false })
@@ -370,7 +378,9 @@ onMounted(async () => {
   viewport.addEventListener('scrollend', handleScrollEnd, { passive: true })
   resizeObserver = new ResizeObserver(updateLayout)
   resizeObserver.observe(viewport)
-  updateLayout()
+  updateLayout(
+    returningGameKey.value ? signalGameCarouselReady : undefined
+  )
 })
 
 onBeforeUnmount(() => {
@@ -416,7 +426,11 @@ onBeforeUnmount(() => {
           :class="{ 'is-active': index === activeIndex }"
           :data-carousel-index="index"
         >
-          <GameCarouselCard :game="game" :active="index === activeIndex" />
+          <GameCarouselCard
+            :game="game"
+            :active="index === activeIndex"
+            :transition-key="returningGameKey"
+          />
         </li>
       </ul>
     </div>

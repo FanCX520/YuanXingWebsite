@@ -10,7 +10,8 @@ import {
 
 const props = defineProps({
   game: { type: Object, required: true },
-  active: { type: Boolean, default: false }
+  active: { type: Boolean, default: false },
+  transitionKey: { type: String, default: '' }
 })
 
 const statusLabel = computed(
@@ -29,10 +30,19 @@ const titleTransitionName = computed(
 const statusTransitionName = computed(
   () => `game-status-${transitionId.value}`
 )
+const isReturnTarget = computed(
+  () => props.transitionKey === getGameCardKey(props.game)
+)
 const { navigate } = useViewTransitionNavigation()
 const coverElementRef = ref(null)
 const titleElementRef = ref(null)
 const statusElementRef = ref(null)
+
+function getReturnStyle(transitionName) {
+  return isReturnTarget.value
+    ? { viewTransitionName: transitionName }
+    : undefined
+}
 
 function handleNavigate(event) {
   if (
@@ -75,6 +85,7 @@ function handleNavigate(event) {
       <span
         ref="coverElementRef"
         class="game-card__cover-media"
+        :style="getReturnStyle(coverTransitionName)"
       >
         <img
           v-if="game.cover"
@@ -94,12 +105,14 @@ function handleNavigate(event) {
           <span
             ref="titleElementRef"
             class="game-card__name"
+            :style="getReturnStyle(titleTransitionName)"
           >
             {{ game.title }}
           </span>
           <span
             ref="statusElementRef"
             class="game-card__status"
+            :style="getReturnStyle(statusTransitionName)"
           >
             {{ statusLabel }}
           </span>
@@ -227,13 +240,27 @@ function handleNavigate(event) {
   inset: auto 0 0;
   min-height: 46%;
   padding: 54px 22px 18px;
+}
+
+.game-card__meta::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
   background: linear-gradient(
     180deg,
     transparent,
     rgba(3, 7, 19, 0.72) 46%,
     rgba(3, 7, 19, 0.96)
   );
+  content: '';
+  opacity: 1;
   pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+html.game-route-transitioning .game-card__meta::before {
+  opacity: 0;
+  transition: none;
 }
 
 .game-card__header {
@@ -247,6 +274,8 @@ function handleNavigate(event) {
 }
 
 .game-card__name {
+  position: relative;
+  z-index: 1;
   overflow: hidden;
   min-width: 0;
   color: #eef5ff;
@@ -261,6 +290,8 @@ function handleNavigate(event) {
 }
 
 .game-card__status {
+  position: relative;
+  z-index: 1;
   flex: none;
   padding: 5px 9px;
   border: 1px solid rgba(255, 240, 174, 0.24);

@@ -9,7 +9,10 @@ export function useViewTransitionNavigation() {
   const router = useRouter()
   let navigating = false
 
-  async function navigate(href) {
+  async function navigate(href, {
+    afterRouteChange = null,
+    onFinished = null
+  } = {}) {
     if (navigating) return
     navigating = true
 
@@ -20,8 +23,14 @@ export function useViewTransitionNavigation() {
     if (reducedMotion) {
       try {
         await router.go(href)
+        await nextTick()
+        await afterRouteChange?.()
       } finally {
-        navigating = false
+        try {
+          onFinished?.()
+        } finally {
+          navigating = false
+        }
       }
       return
     }
@@ -32,13 +41,18 @@ export function useViewTransitionNavigation() {
         const transition = document.startViewTransition(async () => {
           await router.go(href)
           await nextTick()
+          await afterRouteChange?.()
         })
         await transition.finished
       } catch {
         // 浏览器中止过渡时保留当前路由，不重复跳转
       } finally {
         document.documentElement.classList.remove(TRANSITIONING_CLASS)
-        navigating = false
+        try {
+          onFinished?.()
+        } finally {
+          navigating = false
+        }
       }
       return
     }
@@ -51,11 +65,16 @@ export function useViewTransitionNavigation() {
       })
       await router.go(href)
       await nextTick()
+      await afterRouteChange?.()
     } finally {
       window.requestAnimationFrame(() => {
         document.documentElement.classList.remove(ROUTE_FALLBACK_CLASS)
         document.documentElement.classList.remove(TRANSITIONING_CLASS)
-        navigating = false
+        try {
+          onFinished?.()
+        } finally {
+          navigating = false
+        }
       })
     }
   }

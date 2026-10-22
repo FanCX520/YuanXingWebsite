@@ -13,12 +13,19 @@ import { useData, useRoute, useRouter, withBase } from 'vitepress'
 import { Content } from 'vitepress/dist/client/app/components/Content.js'
 import BrandWordmark from '../../../src/components/BrandWordmark.vue'
 import GameArticleHero from '../../../src/components/games/GameArticleHero.vue'
+import {
+  beginGameReturn,
+  endGameReturn,
+  getGameCardKey,
+  waitForGameCarouselReady
+} from '../../../src/components/games/gameCarouselState.js'
 import NavigationStarCanvas from '../../../src/components/navigation/NavigationStarCanvas.vue'
 import SiteHeader from '../../../src/components/navigation/SiteHeader.vue'
 import SpaceBackdrop from '../../../src/components/SpaceBackdrop.vue'
 import { data as homeSections } from '../data/home.data.js'
 import { usePageSectionSnap } from '../../../src/composables/usePageSectionSnap.js'
 import { useSiteNavigation } from '../../../src/composables/useSiteNavigation.js'
+import { useViewTransitionNavigation } from '../../../src/composables/useViewTransitionNavigation.js'
 
 const LogoHero = defineAsyncComponent(() => import('../../../src/components/LogoHero.vue'))
 
@@ -33,6 +40,7 @@ const navigationSceneReady = ref(false)
 const navigationSceneFailed = ref(false)
 const introLocked = ref(false)
 const routeLeaving = ref(false)
+const gameReturnPending = ref(false)
 const scrollProgress = ref(0)
 const logoReplacementProgress = ref(0)
 const activeSection = ref('')
@@ -51,6 +59,7 @@ const isGamePage = computed(() => frontmatter.value?.type === 'game')
 if (isHome.value) introLocked.value = true
 
 const { scrollToSection } = usePageSectionSnap({ enabled: isHome })
+const { navigate: navigateWithTransition } = useViewTransitionNavigation()
 
 const brandProgress = computed(() => {
   if (!isHome.value) return 1
@@ -190,9 +199,23 @@ function updateActiveSection() {
   activeSection.value = section?.dataset.section ?? ''
 }
 
-function handleSectionNavigation(event, item) {
+async function handleGameCatalogReturn() {
+  if (gameReturnPending.value) return
+  gameReturnPending.value = true
+  beginGameReturn(getGameCardKey({ url: route.path }))
+
+  try {
+    await navigateWithTransition(withBase('/#games'), {
+      afterRouteChange: waitForGameCarouselReady,
+      onFinished: endGameReturn
+    })
+  } finally {
+    gameReturnPending.value = false
+  }
+}
+
+async function handleSectionNavigation(event, item) {
   if (
-    !isHome.value ||
     event.button !== 0 ||
     event.metaKey ||
     event.ctrlKey ||
@@ -201,6 +224,15 @@ function handleSectionNavigation(event, item) {
   ) {
     return
   }
+
+  if (!isHome.value && isGamePage.value && item.id === 'games') {
+    event.preventDefault()
+    event.stopPropagation()
+    await handleGameCatalogReturn()
+    return
+  }
+
+  if (!isHome.value) return
 
   const target = document.getElementById(item.id)
   if (!target) return
