@@ -12,9 +12,12 @@ import { useRoute, useRouter, withBase } from 'vitepress'
 // 直接引用 Content，避免 data loader 与 VitePress 公共入口形成循环 chunk。
 import { Content } from 'vitepress/dist/client/app/components/Content.js'
 import BrandWordmark from '../../../src/components/BrandWordmark.vue'
+import NavigationStarCanvas from '../../../src/components/navigation/NavigationStarCanvas.vue'
+import SiteHeader from '../../../src/components/navigation/SiteHeader.vue'
 import SpaceBackdrop from '../../../src/components/SpaceBackdrop.vue'
 import { data as homeSections } from '../data/home.data.js'
 import { usePageSectionSnap } from '../../../src/composables/usePageSectionSnap.js'
+import { useSiteNavigation } from '../../../src/composables/useSiteNavigation.js'
 
 const LogoHero = defineAsyncComponent(() => import('../../../src/components/LogoHero.vue'))
 
@@ -24,6 +27,8 @@ const logoHeroRef = ref(null)
 const heroAnchorRef = ref(null)
 const wordmarkRef = ref(null)
 const sceneFailed = ref(false)
+const navigationSceneReady = ref(false)
+const navigationSceneFailed = ref(false)
 const introLocked = ref(false)
 const routeLeaving = ref(false)
 const scrollProgress = ref(0)
@@ -45,60 +50,25 @@ if (isHome.value) introLocked.value = true
 const { scrollToSection } = usePageSectionSnap({ enabled: isHome })
 
 const brandProgress = computed(() => {
+  if (!isHome.value) return 1
+
   const progress = scrollProgress.value
   return progress * progress * (3 - 2 * progress)
 })
-const navigationSettled = computed(
-  () => !isHome.value || scrollProgress.value >= 0.92
-)
-const sectionPositions = {
-  about: { desktop: { x: 0.14, y: 0.36 }, mobile: { x: 0.13, y: 0.54 } },
-  games: { desktop: { x: 0.84, y: 0.39 }, mobile: { x: 0.87, y: 0.54 } },
-  links: { desktop: { x: 0.2, y: 0.76 }, mobile: { x: 0.5, y: 0.79 } }
-}
-const desktopNavigationCenterY = 45
-const mobileNavigationCenterOffset = 64
+const {
+  items: navigationTargets,
+  glassVisible: navigationGlassVisible
+} = useSiteNavigation({
+  sections: homeSections,
+  viewport,
+  scrollProgress,
+  isHome,
+  activeSection
+})
 
-const sections = [...(homeSections || [])]
-  .filter((section) => sectionPositions[section.id])
-  .sort((a, b) => (a.meta.order ?? 999) - (b.meta.order ?? 999))
-  .map((section) => ({
-    id: section.id,
-    label: section.meta.navLabel || section.meta.title || section.id,
-    scattered: sectionPositions[section.id]
-  }))
-
-const navigationTargets = computed(() => {
-  const { width, height } = viewport.value
-  const progress = isHome.value ? scrollProgress.value : 1
-  const easedProgress = progress * progress * (3 - 2 * progress)
-  const mobile = width <= 680
-
-  return sections.map((section, index) => {
-    const scattered = mobile ? section.scattered.mobile : section.scattered.desktop
-    const settledX = mobile
-      ? (index + 0.5) / sections.length
-      : (width - 388 + index * 124) / width
-    const settledY = mobile
-      ? height - mobileNavigationCenterOffset
-      : desktopNavigationCenterY
-    const x = lerp(scattered.x, settledX, easedProgress)
-    const yPixels = lerp(scattered.y * height, settledY, easedProgress)
-    const y = yPixels / height
-
-    return {
-      id: section.id,
-      label: section.label,
-      href: withBase(`/#${section.id}`),
-      active: isHome.value && activeSection.value === section.id,
-      x,
-      y,
-      style: {
-        left: `${x * width}px`,
-        top: `${yPixels}px`
-      }
-    }
-  })
+const navigationFallback = computed(() => {
+  if (isHome.value) return sceneFailed.value
+  return !navigationSceneReady.value || navigationSceneFailed.value
 })
 
 const brandLayout = computed(() => {
@@ -162,7 +132,9 @@ const brandHomeStyle = computed(() => {
     left: `${layout.insetX - padding}px`,
     top: `${layout.insetY - padding}px`,
     width: `${layout.wordmarkLeft - layout.insetX + wordmarkWidth + padding * 2}px`,
-    height: `${layout.logoSize + padding * 2}px`
+    height: `${layout.logoSize + padding * 2}px`,
+    '--brand-logo-size': `${layout.logoSize}px`,
+    '--brand-padding': `${padding}px`
   }
 })
 
@@ -300,6 +272,10 @@ function setIntroLock(locked) {
   document.documentElement.classList.toggle('intro-locked', locked)
 }
 
+function applyStaticPageVisuals() {
+  document.documentElement.style.setProperty('--intro-backdrop', '1')
+}
+
 function resetHomeScene() {
   introHandle?.dispose()
   introHandle = null
@@ -337,11 +313,24 @@ function handleSceneError() {
   startIntroIfReady()
 }
 
+function handleNavigationSceneReady() {
+  navigationSceneReady.value = true
+  navigationSceneFailed.value = false
+}
+
+function handleNavigationSceneError() {
+  navigationSceneReady.value = false
+  navigationSceneFailed.value = true
+}
+
 watch(isHome, async (home) => {
   resetHomeScene()
+  navigationSceneReady.value = false
+  navigationSceneFailed.value = false
 
   if (!home) {
     setIntroLock(false)
+    applyStaticPageVisuals()
     return
   }
 
@@ -366,9 +355,14 @@ onMounted(async () => {
   setIntroLock(isHome.value)
   if (isHome.value) window.scrollTo({ top: 0, behavior: 'auto' })
 
-  introModule = await import('../../../src/intro/intro.js')
-  if (isHome.value) introModule.applyIntroFallback()
-  startIntroIfReady()
+  if (isHome.value) {
+    introModule = await import('../../../src/intro/intro.js')
+    introModule.applyIntroFallback()
+    startIntroIfReady()
+    return
+  }
+
+  applyStaticPageVisuals()
 })
 
 onBeforeUnmount(() => {
@@ -391,62 +385,27 @@ onBeforeUnmount(() => {
   >
     <SpaceBackdrop />
 
-    <a
-      v-if="isHome"
-      class="brand-home"
-      :class="{ 'brand-home--ready': brandReady }"
-      :style="brandHomeStyle"
-      :href="withBase('/')"
-      target="_self"
-      :tabindex="brandReady ? 0 : -1"
-      :aria-hidden="!brandReady"
-      aria-label="返回元星联邦首页"
-      @click="handleHomeNavigation"
-    />
-    <a
-      v-else
-      class="brand-home brand-home--static"
-      :href="withBase('/')"
-      target="_self"
-      aria-label="返回元星联邦首页"
-      @click="handleHomeNavigation"
-    >
-      <span class="brand-home__star" aria-hidden="true">✦</span>
-      <span>元星联邦</span>
-    </a>
-
-    <div
-      class="star-navigation-glass"
-      :class="{ 'star-navigation-glass--visible': navigationSettled }"
-      aria-hidden="true"
+    <SiteHeader
+      :items="navigationTargets"
+      :home="isHome"
+      :brand-ready="brandReady"
+      :brand-style="brandHomeStyle"
+      :brand-href="withBase('/')"
+      :brand-mark-src="withBase('/images/brand/logo-mark.png')"
+      :wordmark-style="wordmarkStyle"
+      :glass-visible="navigationGlassVisible"
+      :locked="introLocked"
+      :show-fallback="navigationFallback"
+      @brand-select="handleHomeNavigation"
+      @item-select="handleSectionNavigation"
     />
 
-    <nav
-      class="star-navigation"
-      aria-label="首页章节导航"
-      :inert="introLocked ? '' : null"
-    >
-      <a
-        v-for="(item, index) in navigationTargets"
-        :key="item.id"
-        class="star-navigation__link"
-        :class="{ 'is-active': item.active }"
-        :href="item.href"
-        :style="item.style"
-        :data-section-link="item.id"
-        :aria-current="item.active ? 'location' : undefined"
-        @click="handleSectionNavigation($event, item)"
-      >
-        <span
-          v-if="!isHome || sceneFailed"
-          class="star-navigation__fallback"
-          aria-hidden="true"
-        >
-          ✦
-        </span>
-        <span class="star-navigation__label">{{ item.label }}</span>
-      </a>
-    </nav>
+    <NavigationStarCanvas
+      v-if="!isHome"
+      :items="navigationTargets"
+      @scene-ready="handleNavigationSceneReady"
+      @scene-error="handleNavigationSceneError"
+    />
 
     <BrandWordmark
       v-if="isHome"

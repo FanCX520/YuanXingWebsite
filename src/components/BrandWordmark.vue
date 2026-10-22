@@ -2,7 +2,9 @@
 import { ref } from 'vue'
 
 defineProps({
-  travelStyle: { type: Object, default: null }
+  travelStyle: { type: Object, default: null },
+  settled: { type: Boolean, default: false },
+  tag: { type: String, default: 'h1' }
 })
 
 const wordmarkRef = ref(null)
@@ -36,9 +38,13 @@ defineExpose({ updateLight })
 </script>
 
 <template>
-  <div ref="wordmarkRef" class="brand-wordmark">
+  <div
+    ref="wordmarkRef"
+    class="brand-wordmark"
+    :class="{ 'brand-wordmark--settled': settled }"
+  >
     <div class="brand-wordmark__lockup" :style="travelStyle">
-      <h1 class="brand-wordmark__text brand-wordmark__base">元星联邦</h1>
+      <component :is="tag" class="brand-wordmark__text brand-wordmark__base">元星联邦</component>
       <span ref="glowRef" class="brand-wordmark__text brand-wordmark__glow" aria-hidden="true">元星联邦</span>
     </div>
   </div>
@@ -99,6 +105,12 @@ defineExpose({ updateLight })
   background-clip: text;
   -webkit-background-clip: text;
   text-shadow: 0 0 16px rgba(20, 44, 120, 0.34);
+}
+
+.brand-wordmark--settled .brand-wordmark__base {
+  opacity: 1;
+  -webkit-mask-image: none;
+  mask-image: none;
 }
 
 .brand-wordmark__glow {

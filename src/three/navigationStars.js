@@ -5,6 +5,7 @@ export const NAVIGATION_BREATH_PERIOD = 3
 export const NAVIGATION_BREATH_SPEED = (Math.PI * 2) / NAVIGATION_BREATH_PERIOD
 export const NAVIGATION_ROTATION_PERIOD = 7
 export const NAVIGATION_ROTATION_SPEED = (Math.PI * 2) / NAVIGATION_ROTATION_PERIOD
+export const NAVIGATION_ICON_PIXEL_SIZE = 44
 
 const NAVIGATION_NEEDLE = {
   valleyX: 0.85,
@@ -409,5 +410,66 @@ export function createNavigationStarField({ count = 3 } = {}) {
     commit,
     update,
     dispose
+  }
+}
+
+export function createNavigationStarUpdater(field) {
+  const position = new THREE.Vector3()
+  const rotation = new THREE.Quaternion()
+  const scale = new THREE.Vector3()
+  const euler = new THREE.Euler()
+
+  return function updateNavigationStars({
+    targets = [],
+    bounds,
+    camera,
+    elapsed = 0,
+    reducedMotion = false
+  }) {
+    if (!field || !bounds?.width || !bounds?.height) return
+
+    const worldWidth = camera.right - camera.left
+    const worldHeight = camera.top - camera.bottom
+
+    targets.slice(0, 3).forEach((target, index) => {
+      if (!target) return
+
+      const variant = field.variants[index % field.variants.length]
+      const rect = typeof target.getBoundingClientRect === 'function'
+        ? target.getBoundingClientRect()
+        : null
+      const x = rect
+        ? rect.left + rect.width / 2 - bounds.left
+        : target.x * bounds.width
+      const y = rect
+        ? rect.top + rect.height / 2 - bounds.top
+        : target.y * bounds.height
+      const navBreath = reducedMotion
+        ? 0
+        : Math.sin(elapsed * NAVIGATION_BREATH_SPEED + variant.phase)
+      const rotationZ = reducedMotion
+        ? variant.phase
+        : elapsed * NAVIGATION_ROTATION_SPEED + variant.phase
+      const tiltX = reducedMotion ? 0 : variant.tiltX
+      const tiltY = reducedMotion ? 0 : variant.tiltY
+      const pixelSize = Math.max(
+        rect ? Math.min(rect.width, rect.height) : NAVIGATION_ICON_PIXEL_SIZE,
+        28
+      )
+      const worldSize = (pixelSize / bounds.width) * worldWidth * 0.52
+      const scaleBreath = reducedMotion ? 1 : 1 + navBreath * 0.06
+
+      position.set(
+        camera.left + (x / bounds.width) * worldWidth,
+        camera.top - (y / bounds.height) * worldHeight,
+        0.68 + variant.depth
+      )
+      euler.set(tiltX, tiltY, rotationZ)
+      rotation.setFromEuler(euler)
+      scale.setScalar(worldSize * variant.scale * scaleBreath)
+      field.setTransform(index, position, rotation, scale, euler.z)
+    })
+
+    field.commit()
   }
 }

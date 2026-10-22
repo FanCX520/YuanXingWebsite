@@ -5,9 +5,13 @@ import { createLogoOrbitProfiles } from './logoOrbitProfiles.js'
 import { createCosmicMaterials, MAIN_STAR_BREATH_SPEED } from './cosmicMaterials.js'
 import { createLogoBloom } from './logoBloom.js'
 import {
+  createCosmicCamera,
+  createCosmicRenderer,
+  resizeCosmicCamera
+} from './cosmicRuntime.js'
+import {
   createNavigationStarField,
-  NAVIGATION_BREATH_SPEED,
-  NAVIGATION_ROTATION_SPEED
+  createNavigationStarUpdater
 } from './navigationStars.js'
 
 // 星体外观：哑光深蓝，体积交给模型本身，材质只做基础塑形
@@ -129,27 +133,18 @@ export function createLogoScene(canvas, {
   getMainLogoOpacity,
   getNavigationTargets
 } = {}) {
-  const renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true,
-    alpha: true,
-    powerPreference: 'high-performance'
-  })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.outputColorSpace = THREE.SRGBColorSpace
-  renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.1
-  renderer.setClearColor(0x000000, 0)
+  const renderer = createCosmicRenderer(canvas)
 
   const scene = new THREE.Scene()
   const environment = createStudioEnvironment(renderer)
   scene.environment = environment
 
-  const camera = new THREE.OrthographicCamera(-1.35, 1.35, 1.35, -1.35, 0.1, 50)
+  const camera = createCosmicCamera()
   const isSideView = view === 'side'
-  camera.position.set(isSideView ? 5 : 0, isSideView ? 0.05 : 0, isSideView ? 0 : 5)
-  camera.up.set(0, 1, 0)
-  camera.lookAt(0, 0, 0)
+  if (isSideView) {
+    camera.position.set(5, 0.05, 0)
+    camera.lookAt(0, 0, 0)
+  }
 
   buildLights(scene)
 
@@ -187,6 +182,9 @@ export function createLogoScene(canvas, {
     ? createNavigationStarField({ count: 3 })
     : null
   if (navigationField) scene.add(navigationField.group)
+  const updateNavigationStars = navigationField
+    ? createNavigationStarUpdater(navigationField)
+    : null
 
   const bloom = createLogoBloom(renderer, scene, camera)
 
@@ -215,10 +213,6 @@ export function createLogoScene(canvas, {
   let lastTime = performance.now()
   const starLightWorldPosition = new THREE.Vector3()
   const starLightScreenPosition = new THREE.Vector3()
-  const navigationPosition = new THREE.Vector3()
-  const navigationRotation = new THREE.Quaternion()
-  const navigationScale = new THREE.Vector3()
-  const navigationEuler = new THREE.Euler()
 
   function applyIntro() {
     mainLogoOpacity = THREE.MathUtils.clamp(getMainLogoOpacity?.() ?? 1, 0, 1)
@@ -240,73 +234,10 @@ export function createLogoScene(canvas, {
     const height = canvas.clientHeight || canvas.parentElement?.clientHeight || 1
     renderer.setSize(width, height, false)
     bloom.resize(width, height)
-    const aspect = width / height
-    const halfHeight = 1.35 / Math.min(aspect, 1)
-    camera.left = -halfHeight * aspect
-    camera.right = halfHeight * aspect
-    camera.top = halfHeight
-    camera.bottom = -halfHeight
-    camera.updateProjectionMatrix()
+    resizeCosmicCamera(camera, width, height)
     root.scale.setScalar(MODEL_SCALE)
     applyIntro()
     bloom.render()
-  }
-
-  function updateNavigationStars() {
-    if (!navigationField) return
-
-    const targets = getNavigationTargets?.() ?? []
-    const bounds = canvas.getBoundingClientRect()
-    if (!bounds.width || !bounds.height) return
-
-    const worldWidth = camera.right - camera.left
-    const worldHeight = camera.top - camera.bottom
-    targets.slice(0, 3).forEach((target, index) => {
-      if (!target) return
-      const variant = navigationField.variants[index % navigationField.variants.length]
-      const rect = typeof target.getBoundingClientRect === 'function'
-        ? target.getBoundingClientRect()
-        : null
-      const x = rect
-        ? rect.left + rect.width / 2 - bounds.left
-        : target.x * bounds.width
-      const y = rect
-        ? rect.top + rect.height / 2 - bounds.top
-        : target.y * bounds.height
-      navigationPosition.set(
-        camera.left + (x / bounds.width) * worldWidth,
-        camera.top - (y / bounds.height) * worldHeight,
-        0.68
-      )
-      const navBreath = reducedMotion.matches
-        ? 0
-        : Math.sin(elapsed * NAVIGATION_BREATH_SPEED + variant.phase)
-      const rotation = reducedMotion.matches
-        ? variant.phase
-        : elapsed * NAVIGATION_ROTATION_SPEED + variant.phase
-      const tiltX = reducedMotion.matches
-        ? 0
-        : variant.tiltX
-      const tiltY = reducedMotion.matches
-        ? 0
-        : variant.tiltY
-      navigationEuler.set(tiltX, tiltY, rotation)
-      navigationRotation.setFromEuler(navigationEuler)
-      const pixelSize = Math.max(rect ? Math.min(rect.width, rect.height) : 44, 28)
-      const worldSize = (pixelSize / bounds.width) * worldWidth * 0.52
-      const scaleBreath = reducedMotion.matches ? 1 : 1 + navBreath * 0.06
-      navigationScale.setScalar(worldSize * variant.scale * scaleBreath)
-      navigationPosition.z = 0.68 + variant.depth
-      navigationField.setTransform(
-        index,
-        navigationPosition,
-        navigationRotation,
-        navigationScale,
-        navigationEuler.z
-      )
-    })
-
-    navigationField.commit()
   }
 
   function updateLogoFromTarget() {
@@ -383,7 +314,13 @@ export function createLogoScene(canvas, {
     if (root.visible && !getLogoTarget?.()) {
       root.position.y += Math.sin(elapsed * 0.45) * 0.008 * motionScale
     }
-    updateNavigationStars()
+    updateNavigationStars?.({
+      targets: getNavigationTargets?.() ?? [],
+      bounds: canvas.getBoundingClientRect(),
+      camera,
+      elapsed,
+      reducedMotion: reducedMotion.matches
+    })
     navigationField?.update(motionEnabled ? elapsed : 0, motionEnabled)
     root.updateMatrixWorld()
     starLight.getWorldPosition(starLightWorldPosition)
