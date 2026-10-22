@@ -1,24 +1,12 @@
 ---
 type: game
-id: roadsyettraveled
-title: 未行之途2
-description: 未行之途汉化项目 Wiki。
+id: roadsyettraveled2-copy
+title: 未行之途2（测试副本）
+description: 临时测试副本，不参与首页游戏目录。
 status: translating
-order: 10
-# 封面放在 docs/public/images/games/，填写站点绝对路径
+order: 920
 cover: /images/games/YXLB.png
-draft: false
+draft: true
 ---
 
-Wiki 内容和截图待整理。
-
-![未行之途图片](./images/未行之途.jpg){.image-right .image-wrap}
-
-第一段文字，会环绕在图片左侧。
-
-第二段文字，仍然环绕在图片左侧。
-
-第三段文字从图片下方开始排版。
-{.image-wrap-stop}
-
-第四段文字继续使用正文的全宽。
+此目录为临时测试副本，不参与正式发布。

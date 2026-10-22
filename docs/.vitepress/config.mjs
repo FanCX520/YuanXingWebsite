@@ -5,7 +5,7 @@ export default defineConfig({
   title: '元星联邦',
   description: '元星联邦汉化组官网',
   cleanUrls: true,
-  srcExclude: ['home/**'],
+  srcExclude: ['home/**', 'games/README.md'],
   outDir: '../dist',
   scrollOffset: 88,
   head: [
