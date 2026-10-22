@@ -1,6 +1,11 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import GameCarouselCard from './GameCarouselCard.vue'
+import {
+  getGameCardKey,
+  readActiveGameKey,
+  rememberActiveGame
+} from './gameCarouselState.js'
 
 const props = defineProps({
   games: { type: Array, default: () => [] }
@@ -107,7 +112,10 @@ function updateCards() {
     card.style.zIndex = String(80 - Math.round(depth * 10))
   })
 
-  activeIndex.value = nearestIndex
+  if (activeIndex.value !== nearestIndex) {
+    activeIndex.value = nearestIndex
+    rememberActiveGame(getGameCardKey(props.games[nearestIndex]))
+  }
 }
 
 function scheduleCardUpdate() {
@@ -340,8 +348,8 @@ function updateLayout() {
   track.style.setProperty('--carousel-inline-space', `${edgeSpace}px`)
 
   window.requestAnimationFrame(() => {
-    updateCards()
     centerCard(activeIndex.value, 'auto')
+    scheduleCardUpdate()
   })
 }
 
@@ -349,6 +357,12 @@ onMounted(async () => {
   await nextTick()
   const viewport = viewportRef.value
   if (!viewport) return
+
+  const savedGameKey = readActiveGameKey()
+  const savedIndex = props.games.findIndex(
+    (game) => getGameCardKey(game) === savedGameKey
+  )
+  if (savedIndex >= 0) activeIndex.value = savedIndex
 
   viewport.addEventListener('scroll', handleViewportScroll, { passive: true })
   viewport.addEventListener('wheel', handleWheel, { passive: false })

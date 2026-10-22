@@ -3,6 +3,10 @@ import { computed, ref } from 'vue'
 import { withBase } from 'vitepress'
 import { useViewTransitionNavigation } from '../../composables/useViewTransitionNavigation.js'
 import { getGameStatusLabel } from './gameStatus.js'
+import {
+  getGameCardKey,
+  rememberActiveGame
+} from './gameCarouselState.js'
 
 const props = defineProps({
   game: { type: Object, required: true },
@@ -50,6 +54,7 @@ function handleNavigate(event) {
     element?.style.setProperty('view-transition-name', transitionName)
   })
 
+  rememberActiveGame(getGameCardKey(props.game))
   event.preventDefault()
   navigate(withBase(props.game.url)).finally(() => {
     transitionElements.forEach(([element]) => {
