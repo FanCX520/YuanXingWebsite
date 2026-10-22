@@ -331,10 +331,16 @@ function handleKeydown(event) {
   }
 }
 
-function updateLayout(onReady) {
+function applyLayout({
+  defer = true,
+  onReady = null
+} = {}) {
   const viewport = viewportRef.value
   const track = trackRef.value
-  if (!viewport || !track) return
+  if (!viewport || !track) {
+    onReady?.()
+    return false
+  }
 
   const sidePeek = Math.min(Math.max(viewport.clientWidth * 0.08, 28), 44)
   const cardWidth = Math.min(
@@ -344,18 +350,28 @@ function updateLayout(onReady) {
   track.style.setProperty('--carousel-card-width', `${cardWidth.toFixed(2)}px`)
 
   const firstCard = cardElements.get(0)
-  if (!firstCard) return
+  if (!firstCard) {
+    onReady?.()
+    return false
+  }
 
   const edgeSpace = Math.max((viewport.clientWidth - firstCard.offsetWidth) / 2, 0)
   track.style.setProperty('--carousel-inline-space', `${edgeSpace}px`)
 
-  window.requestAnimationFrame(() => {
+  const finishLayout = () => {
     centerCard(activeIndex.value, 'auto')
-    scheduleCardUpdate()
-    if (typeof onReady === 'function') {
-      window.requestAnimationFrame(onReady)
-    }
-  })
+    updateCards()
+    onReady?.()
+  }
+
+  if (defer) window.requestAnimationFrame(finishLayout)
+  else finishLayout()
+
+  return true
+}
+
+function updateLayout() {
+  applyLayout()
 }
 
 onMounted(async () => {
@@ -378,9 +394,14 @@ onMounted(async () => {
   viewport.addEventListener('scrollend', handleScrollEnd, { passive: true })
   resizeObserver = new ResizeObserver(updateLayout)
   resizeObserver.observe(viewport)
-  updateLayout(
-    returningGameKey.value ? signalGameCarouselReady : undefined
-  )
+  if (returningGameKey.value) {
+    applyLayout({
+      defer: false,
+      onReady: signalGameCarouselReady
+    })
+  } else {
+    updateLayout()
+  }
 })
 
 onBeforeUnmount(() => {

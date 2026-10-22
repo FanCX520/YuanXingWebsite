@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 const ACTIVE_GAME_KEY = 'yuanxing:active-game'
-const RETURN_READY_TIMEOUT = 900
+const RETURN_READY_TIMEOUT = 300
 
 export const returningGameKey = ref('')
 
