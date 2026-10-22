@@ -35,12 +35,12 @@ const statusLabel = computed(
         decoding="async"
       />
       <span v-else class="game-card__placeholder" aria-hidden="true">✦</span>
-    </span>
 
-    <span class="game-card__body">
-      <span class="game-card__header">
-        <span class="game-card__name">{{ game.title }}</span>
-        <span class="game-card__status">{{ statusLabel }}</span>
+      <span class="game-card__meta">
+        <span class="game-card__header">
+          <span class="game-card__name">{{ game.title }}</span>
+          <span class="game-card__status">{{ statusLabel }}</span>
+        </span>
       </span>
     </span>
   </a>
@@ -120,20 +120,11 @@ const statusLabel = computed(
   display: grid;
   overflow: hidden;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 1920 / 1080;
   place-items: center;
   background:
     radial-gradient(circle at 50% 50%, rgba(75, 136, 230, 0.24), transparent 54%),
     rgba(4, 9, 24, 0.92);
-}
-
-.game-card__cover-frame::after {
-  position: absolute;
-  inset: auto 0 0;
-  height: 44%;
-  background: linear-gradient(transparent, rgba(3, 7, 19, 0.86));
-  content: '';
-  pointer-events: none;
 }
 
 .game-card__cover {
@@ -155,41 +146,78 @@ const statusLabel = computed(
   text-shadow: 0 0 24px var(--star-warm-soft);
 }
 
-.game-card__body {
-  position: relative;
-  z-index: 1;
+.game-card__meta {
+  position: absolute;
+  z-index: 2;
   display: flex;
-  flex-direction: column;
-  min-height: 86px;
-  justify-content: center;
-  padding: 18px 22px;
+  align-items: flex-end;
+  inset: auto 0 0;
+  min-height: 46%;
+  padding: 54px 22px 18px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(3, 7, 19, 0.72) 46%,
+    rgba(3, 7, 19, 0.96)
+  );
+  pointer-events: none;
 }
 
 .game-card__header {
   display: flex;
-  align-items: baseline;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 18px;
+  gap: 8px 18px;
+  min-width: 0;
 }
 
 .game-card__name {
+  overflow: hidden;
+  min-width: 0;
   color: #eef5ff;
   font-size: clamp(1.16rem, 2vw, 1.42rem);
   font-weight: 700;
+  line-height: 1.25;
   letter-spacing: 0.03em;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.9);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
 }
 
 .game-card__status {
   flex: none;
+  padding: 5px 9px;
+  border: 1px solid rgba(255, 240, 174, 0.24);
+  border-radius: 999px;
+  background: rgba(4, 9, 24, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 219, 0.08);
   color: var(--star-warm);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.9);
 }
 
 @media (max-width: 680px) {
-  .game-card__body {
-    min-height: 78px;
-    padding: 15px 18px;
+  .game-card__meta {
+    min-height: 50%;
+    padding: 48px 18px 15px;
+  }
+
+  .game-card__header {
+    gap: 7px 14px;
+  }
+
+  .game-card__name {
+    font-size: 1.08rem;
+  }
+
+  .game-card__status {
+    padding: 4px 8px;
+    font-size: 0.66rem;
   }
 }
 
