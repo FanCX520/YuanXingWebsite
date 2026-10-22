@@ -12,6 +12,7 @@ import { useRoute, useRouter, withBase } from 'vitepress'
 // 直接引用 Content，避免 data loader 与 VitePress 公共入口形成循环 chunk。
 import { Content } from 'vitepress/dist/client/app/components/Content.js'
 import BrandWordmark from '../../../src/components/BrandWordmark.vue'
+import NavigationStars from '../../../src/components/navigation/NavigationStars.vue'
 import SpaceBackdrop from '../../../src/components/SpaceBackdrop.vue'
 import { data as homeSections } from '../data/home.data.js'
 import { usePageSectionSnap } from '../../../src/composables/usePageSectionSnap.js'
@@ -26,6 +27,7 @@ const wordmarkRef = ref(null)
 const sceneFailed = ref(false)
 const introLocked = ref(false)
 const routeLeaving = ref(false)
+const navigationStarsReady = ref(false)
 const scrollProgress = ref(0)
 const activeSection = ref('')
 const viewport = ref({ width: 1440, height: 900 })
@@ -320,6 +322,7 @@ function handleSceneError() {
 
 watch(isHome, async (home) => {
   resetHomeScene()
+  navigationStarsReady.value = false
 
   if (!home) {
     setIntroLock(false)
@@ -387,6 +390,7 @@ onBeforeUnmount(() => {
     <a
       v-else
       class="brand-home brand-home--static"
+      :class="{ 'brand-home--three-stars': navigationStarsReady }"
       :href="withBase('/')"
       target="_self"
       aria-label="返回元星联邦首页"
@@ -400,6 +404,12 @@ onBeforeUnmount(() => {
       class="star-navigation-glass"
       :class="{ 'star-navigation-glass--visible': navigationSettled }"
       aria-hidden="true"
+    />
+
+    <NavigationStars
+      v-if="!isHome"
+      @scene-ready="navigationStarsReady = true"
+      @scene-error="navigationStarsReady = false"
     />
 
     <nav
@@ -419,7 +429,7 @@ onBeforeUnmount(() => {
         @click="handleSectionNavigation($event, item)"
       >
         <span
-          v-if="!isHome || sceneFailed"
+          v-if="isHome ? sceneFailed : !navigationStarsReady"
           class="star-navigation__fallback"
           aria-hidden="true"
         >
