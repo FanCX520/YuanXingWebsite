@@ -34,23 +34,22 @@ const statusLabel = computed(
 <template>
   <header class="game-article-hero">
     <div class="game-article-hero__cover-frame">
-      <img
-        v-if="frontmatter.cover"
-        class="game-article-hero__cover"
-        :src="withBase(frontmatter.cover)"
-        :alt="`${title} 封面`"
+      <div
+        class="game-article-hero__cover-media"
         :style="{ viewTransitionName: coverTransitionName }"
-        decoding="async"
-        fetchpriority="high"
-      />
-      <span
-        v-else
-        class="game-article-hero__placeholder"
-        :style="{ viewTransitionName: coverTransitionName }"
-        aria-hidden="true"
       >
-        ✦
-      </span>
+        <img
+          v-if="frontmatter.cover"
+          class="game-article-hero__cover"
+          :src="withBase(frontmatter.cover)"
+          :alt="`${title} 封面`"
+          decoding="async"
+          fetchpriority="high"
+        />
+        <span v-else class="game-article-hero__placeholder" aria-hidden="true">
+          ✦
+        </span>
+      </div>
 
       <div class="game-article-hero__meta">
         <h1
@@ -100,7 +99,17 @@ const statusLabel = computed(
   object-fit: cover;
 }
 
+.game-article-hero__cover-media {
+  position: absolute;
+  display: grid;
+  overflow: hidden;
+  inset: 0;
+  place-items: center;
+  border-radius: inherit;
+}
+
 .game-article-hero__placeholder {
+  position: absolute;
   color: var(--star-warm);
   font-size: clamp(4rem, 12vw, 8rem);
   text-shadow: 0 0 32px var(--star-warm-soft);
@@ -108,6 +117,7 @@ const statusLabel = computed(
 
 .game-article-hero__meta {
   position: absolute;
+  z-index: 1;
   display: flex;
   align-items: flex-end;
   inset: auto 0 0;

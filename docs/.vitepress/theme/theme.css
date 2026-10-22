@@ -63,6 +63,18 @@ html.route-fallback-leaving .site-shell {
   opacity: 1;
 }
 
+.game-article-body {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+html.game-route-transitioning .game-article-body {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: none;
+}
+
 .site-shell > .space-backdrop {
   position: fixed;
   z-index: -1;

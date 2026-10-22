@@ -453,7 +453,10 @@ onBeforeUnmount(() => {
         v-if="isGamePage"
         :frontmatter="frontmatter"
       />
-      <Content />
+      <div v-if="isGamePage" class="game-article-body">
+        <Content />
+      </div>
+      <Content v-else />
     </main>
 
     <div v-if="isHome && introLocked" class="intro-input-lock" aria-hidden="true" />

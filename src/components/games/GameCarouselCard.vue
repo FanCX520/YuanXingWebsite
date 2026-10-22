@@ -67,22 +67,21 @@ function handleNavigate(event) {
     @click="handleNavigate"
   >
     <span class="game-card__cover-frame">
-      <img
-        v-if="game.cover"
-        ref="coverElementRef"
-        class="game-card__cover"
-        :src="withBase(game.cover)"
-        :alt="`${game.title} 封面`"
-        loading="lazy"
-        decoding="async"
-      />
       <span
-        v-else
         ref="coverElementRef"
-        class="game-card__placeholder"
-        aria-hidden="true"
+        class="game-card__cover-media"
       >
-        ✦
+        <img
+          v-if="game.cover"
+          class="game-card__cover"
+          :src="withBase(game.cover)"
+          :alt="`${game.title} 封面`"
+          loading="lazy"
+          decoding="async"
+        />
+        <span v-else class="game-card__placeholder" aria-hidden="true">
+          ✦
+        </span>
       </span>
 
       <span class="game-card__meta">
@@ -186,6 +185,15 @@ function handleNavigate(event) {
     rgba(4, 9, 24, 0.92);
 }
 
+.game-card__cover-media {
+  position: absolute;
+  display: grid;
+  overflow: hidden;
+  inset: 0;
+  place-items: center;
+  border-radius: inherit;
+}
+
 .game-card__cover {
   display: block;
   width: 100%;
@@ -200,6 +208,7 @@ function handleNavigate(event) {
 }
 
 .game-card__placeholder {
+  position: absolute;
   color: var(--star-warm);
   font-size: 3.4rem;
   text-shadow: 0 0 24px var(--star-warm-soft);

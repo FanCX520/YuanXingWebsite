@@ -3,6 +3,7 @@ import { useRouter } from 'vitepress'
 
 const FALLBACK_FADE_MS = 140
 const ROUTE_FALLBACK_CLASS = 'route-fallback-leaving'
+const TRANSITIONING_CLASS = 'game-route-transitioning'
 
 export function useViewTransitionNavigation() {
   const router = useRouter()
@@ -26,6 +27,7 @@ export function useViewTransitionNavigation() {
     }
 
     if (typeof document.startViewTransition === 'function') {
+      document.documentElement.classList.add(TRANSITIONING_CLASS)
       try {
         const transition = document.startViewTransition(async () => {
           await router.go(href)
@@ -35,12 +37,14 @@ export function useViewTransitionNavigation() {
       } catch {
         // 浏览器中止过渡时保留当前路由，不重复跳转
       } finally {
+        document.documentElement.classList.remove(TRANSITIONING_CLASS)
         navigating = false
       }
       return
     }
 
     document.documentElement.classList.add(ROUTE_FALLBACK_CLASS)
+    document.documentElement.classList.add(TRANSITIONING_CLASS)
     try {
       await new Promise((resolve) => {
         window.setTimeout(resolve, FALLBACK_FADE_MS)
@@ -50,6 +54,7 @@ export function useViewTransitionNavigation() {
     } finally {
       window.requestAnimationFrame(() => {
         document.documentElement.classList.remove(ROUTE_FALLBACK_CLASS)
+        document.documentElement.classList.remove(TRANSITIONING_CLASS)
         navigating = false
       })
     }
