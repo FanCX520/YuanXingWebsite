@@ -4,7 +4,8 @@ import { ref } from 'vue'
 defineProps({
   travelStyle: { type: Object, default: null },
   settled: { type: Boolean, default: false },
-  tag: { type: String, default: 'h1' }
+  tag: { type: String, default: 'h1' },
+  headingId: { type: String, default: undefined }
 })
 
 const wordmarkRef = ref(null)
@@ -44,7 +45,13 @@ defineExpose({ updateLight })
     :class="{ 'brand-wordmark--settled': settled }"
   >
     <div class="brand-wordmark__lockup" :style="travelStyle">
-      <component :is="tag" class="brand-wordmark__text brand-wordmark__base">元星联邦</component>
+      <component
+        :is="tag"
+        :id="headingId"
+        class="brand-wordmark__text brand-wordmark__base"
+      >
+        元星联邦
+      </component>
       <span ref="glowRef" class="brand-wordmark__text brand-wordmark__glow" aria-hidden="true">元星联邦</span>
     </div>
   </div>

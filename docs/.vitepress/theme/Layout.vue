@@ -570,6 +570,7 @@ onBeforeUnmount(() => {
     <BrandWordmark
       v-if="isHome"
       ref="wordmarkRef"
+      heading-id="home-title"
       :travel-style="wordmarkStyle"
     />
 
