@@ -12,6 +12,7 @@ import { Content } from 'vitepress/dist/client/app/components/Content.js'
 import BrandWordmark from '../../../src/components/BrandWordmark.vue'
 import GameArticleHero from '../../../src/components/games/GameArticleHero.vue'
 import NavigationStarCanvas from '../../../src/components/navigation/NavigationStarCanvas.vue'
+import NotFoundPage from '../../../src/components/NotFoundPage.vue'
 import SiteHeader from '../../../src/components/navigation/SiteHeader.vue'
 import SpaceBackdrop from '../../../src/components/SpaceBackdrop.vue'
 import { data as homeSections } from '../data/home.data.js'
@@ -25,7 +26,7 @@ import { getBrandGeometry } from '../../../src/layout/brandGeometry.js'
 const LogoHero = defineAsyncComponent(() => import('../../../src/components/LogoHero.vue'))
 
 const route = useRoute()
-const { frontmatter } = useData()
+const { frontmatter, page } = useData()
 const logoHeroRef = ref(null)
 const heroAnchorRef = ref(null)
 const wordmarkRef = ref(null)
@@ -48,6 +49,7 @@ const isHome = computed(() => {
   )
 })
 const isGamePage = computed(() => frontmatter.value?.type === 'game')
+const isNotFound = computed(() => page.value?.isNotFound === true)
 const {
   introLocked,
   sceneFailed,
@@ -233,14 +235,17 @@ onMounted(async () => {
       class="page-content page-content--article"
       :class="{ 'page-content--game': isGamePage }"
     >
-      <GameArticleHero
-        v-if="isGamePage"
-        :frontmatter="frontmatter"
-      />
-      <div v-if="isGamePage" class="game-article-body">
-        <Content />
-      </div>
-      <Content v-else />
+      <NotFoundPage v-if="isNotFound" />
+      <template v-else>
+        <GameArticleHero
+          v-if="isGamePage"
+          :frontmatter="frontmatter"
+        />
+        <div v-if="isGamePage" class="game-article-body">
+          <Content />
+        </div>
+        <Content v-else />
+      </template>
     </main>
 
     <div v-if="isHome && introLocked" class="intro-input-lock" aria-hidden="true" />
