@@ -209,7 +209,7 @@ Markdown 图片支持以下布局类：
 ### 品牌和导航资源
 
 - 首页滚动后的品牌 LOGO：`docs/public/images/brand/logo-mark.png`。
-- 站点图标：`docs/public/favicon.svg`。
+- 浏览器站点图标：复用 `docs/public/images/brand/logo-mark.png`。
 - 背景图：`docs/public/assets/`。
 
 修改品牌资源时，需要同时检查桌面导航、手机品牌毛玻璃、详情页头部和开场结束状态。
@@ -223,6 +223,7 @@ Markdown 图片支持以下布局类：
 - 同一标签页首次进入首页播放。
 - 刷新或章节往返不重复播放。
 - 新标签页重新播放。
+- 开场动画 chunk 加载失败时自动切换到静态终态，不会锁死页面。
 
 调试参数：
 
@@ -292,12 +293,26 @@ npm run build
 - `outDir: '../dist'` 将静态产物输出到项目根目录的 `dist/`。
 - `srcExclude: ['home/**']` 阻止首页内容片段成为独立路由。
 
-部署时将 `dist/` 作为静态目录发布。如果站点部署在子路径下，需要在 VitePress 配置中补充正确的 `base`，并重新检查：
+部署时将 `dist/` 作为静态目录发布。站点默认使用根路径 `/`；子路径部署通过 `SITE_BASE` 注入 base：
+
+```bash
+SITE_BASE=/yuanxing-website/ npm run build
+```
+
+PowerShell：
+
+```powershell
+$env:SITE_BASE='/yuanxing-website/'
+npm run build
+```
+
+`SITE_BASE` 会自动用于 VitePress base、favicon、首页判定、导航和游戏路由。部署后重新检查：
 
 - 品牌 LOGO、封面和背景图路径。
 - 游戏详情页直接访问。
 - 导航链接和共享元素动画。
 - Three.js 材质和静态资源请求。
+- 浏览器后退和首页章节恢复。
 
 ## 相关文档
 
