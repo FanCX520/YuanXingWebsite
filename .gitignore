@@ -8,7 +8,3 @@ docs/.vitepress/cache/
 .env.*
 tools/
 .mimocode/
-AGENTS.md
-PROJECT_LOG.md
-PROJECT_PLAN.md
-TODO.md

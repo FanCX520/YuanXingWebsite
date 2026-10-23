@@ -60,10 +60,6 @@ npm run preview
 │  ├─ layout/                      # 品牌几何等纯布局计算
 │  ├─ intro/                       # 首页开场时间轴
 │  └─ three/                       # Three.js 场景、几何、材质和后处理
-├─ PROJECT_PLAN.md                 # 当前方案与体验契约
-├─ PROJECT_LOG.md                  # 已发生事实和关键提交
-├─ TODO.md                         # 当前待办与发布准备
-└─ AGENTS.md                       # 仓库协作与代码规范
 ```
 
 `dist/`、`docs/.vitepress/cache/`、`.screenshots/` 和 `tools/` 属于生成或调试输出，不应手工维护或提交。
@@ -334,9 +330,5 @@ npm run build
 
 ## 相关文档
 
-- [PROJECT_PLAN.md](./PROJECT_PLAN.md)：目标、架构、体验契约和验收标准。
-- [PROJECT_LOG.md](./PROJECT_LOG.md)：关键提交、决策和验证记录。
-- [TODO.md](./TODO.md)：当前待办和发布准备。
-- [AGENTS.md](./AGENTS.md)：仓库协作、代码风格和测试规范。
 - [首页内容说明](./docs/home/README.md)：首页内容和图片排版说明。
 - [游戏内容说明](./docs/games/README.md)：游戏字段、正文图片和排版说明。
