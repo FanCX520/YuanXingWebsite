@@ -26,6 +26,7 @@ import SiteHeader from '../../../src/components/navigation/SiteHeader.vue'
 import SpaceBackdrop from '../../../src/components/SpaceBackdrop.vue'
 import { data as homeSections } from '../data/home.data.js'
 import { usePageSectionSnap } from '../../../src/composables/usePageSectionSnap.js'
+import { useHomeScrollState } from '../../../src/composables/useHomeScrollState.js'
 import { useIntroController } from '../../../src/composables/useIntroController.js'
 import { useSiteNavigation } from '../../../src/composables/useSiteNavigation.js'
 import { useViewTransitionNavigation } from '../../../src/composables/useViewTransitionNavigation.js'
@@ -43,11 +44,6 @@ const navigationSceneReady = ref(false)
 const navigationSceneFailed = ref(false)
 const routeLeaving = ref(false)
 const gameReturnPending = ref(false)
-const scrollProgress = ref(0)
-const logoReplacementProgress = ref(0)
-const activeSection = ref('')
-const viewport = ref({ width: 1440, height: 900 })
-let scrollFrame = 0
 let previousScrollRestoration = 'auto'
 
 function normalizeSitePath(pathname) {
@@ -78,6 +74,14 @@ const {
   isHome,
   logoHeroRef
 })
+const {
+  viewport,
+  scrollProgress,
+  logoReplacementProgress,
+  activeSection,
+  getMainLogoOpacity,
+  refreshLayout
+} = useHomeScrollState({ isHome })
 
 watch(isGamePage, (gamePage) => {
   if (gamePage && typeof window !== 'undefined') {
@@ -116,51 +120,6 @@ const heroAnchorStyle = computed(() => brandGeometry.value.heroAnchorStyle)
 const wordmarkStyle = computed(() => brandGeometry.value.wordmarkStyle)
 const brandHomeStyle = computed(() => brandGeometry.value.brandHomeStyle)
 const brandReady = computed(() => brandGeometry.value.brandReady)
-
-function updateViewport() {
-  viewport.value = { width: window.innerWidth, height: window.innerHeight }
-}
-
-function updateScrollState() {
-  scrollProgress.value = Math.min(
-    Math.max(window.scrollY / Math.max(window.innerHeight * 0.62, 1), 0),
-    1
-  )
-  logoReplacementProgress.value = calculateLogoReplacementProgress()
-}
-
-function calculateLogoReplacementProgress() {
-  if (typeof window === 'undefined' || !isHome.value) return 0
-
-  const settleAt = window.innerHeight * 0.62
-  const hero = document.querySelector('.home-hero')
-  const sectionTop = hero
-    ? hero.getBoundingClientRect().bottom + window.scrollY
-    : window.innerHeight
-  const range = Math.max(sectionTop - settleAt, 1)
-
-  return Math.min(Math.max((window.scrollY - settleAt) / range, 0), 1)
-}
-
-function getMainLogoOpacity() {
-  return 1 - calculateLogoReplacementProgress()
-}
-
-function updateActiveSection() {
-  if (!isHome.value) {
-    activeSection.value = ''
-    return
-  }
-
-  const activationLine = window.innerHeight * 0.5
-  const section = Array.from(document.querySelectorAll('.home-section'))
-    .find((element) => {
-      const bounds = element.getBoundingClientRect()
-      return bounds.top <= activationLine && bounds.bottom > activationLine
-    })
-
-  activeSection.value = section?.dataset.section ?? ''
-}
 
 function scrollToCurrentHomeSection() {
   const hash = route.hash?.slice(1)
@@ -312,16 +271,6 @@ async function handleHomeNavigation(event) {
   }
 }
 
-function scheduleViewportUpdate() {
-  if (scrollFrame) return
-  scrollFrame = window.requestAnimationFrame(() => {
-    scrollFrame = 0
-    updateViewport()
-    updateScrollState()
-    updateActiveSection()
-  })
-}
-
 function getNavigationTargets() {
   return navigationTargets.value
 }
@@ -350,10 +299,12 @@ watch(isHome, async (home) => {
 
   if (!home) {
     leaveHomeIntro()
+    refreshLayout()
     return
   }
 
   scrollToCurrentHomeSection()
+  refreshLayout()
   await enterHomeIntro()
 }, { flush: 'post' })
 
@@ -361,12 +312,10 @@ onMounted(async () => {
   previousScrollRestoration = window.history.scrollRestoration
   window.history.scrollRestoration = 'manual'
   window.addEventListener('popstate', handleBrowserBack)
-  window.addEventListener('scroll', scheduleViewportUpdate, { passive: true })
-  window.addEventListener('resize', scheduleViewportUpdate)
-  updateViewport()
-  updateScrollState()
-  updateActiveSection()
-  if (isHome.value) scrollToCurrentHomeSection()
+  if (isHome.value) {
+    scrollToCurrentHomeSection()
+    refreshLayout()
+  }
 
   if (isHome.value) {
     await enterHomeIntro()
@@ -378,9 +327,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('popstate', handleBrowserBack)
-  window.removeEventListener('scroll', scheduleViewportUpdate)
-  window.removeEventListener('resize', scheduleViewportUpdate)
-  if (scrollFrame) window.cancelAnimationFrame(scrollFrame)
   window.history.scrollRestoration = previousScrollRestoration
 })
 </script>
