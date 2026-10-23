@@ -167,6 +167,33 @@ Markdown 使用站点绝对路径：
 
 两张图会自动排成两列。用空行拆成两个段落后，会各自独占一行。
 
+### 带链接的图片
+
+VitePress 会把 `{.image-left}` 等属性应用到外层链接，而不是内部 `<img>`。当前主题同时支持直接图片和链接图片：
+
+```md
+[![itch.io](/images/home/itch-io.webp)](https://example.com){.image-left}
+[![X](/images/home/x.webp)](https://example.com){.image-right}
+```
+
+说明文字与图片组之间要留空行；两张图片之间不要留空行，否则双列会变成两行。
+
+### 三图并排
+
+三张图片使用专用网格，不要复用 `image-left`、`image-right` 或 `image-full`：
+
+```md
+[![itch.io](/images/home/itch-io.webp)](https://example.com)
+[![X](/images/home/x.webp)](https://example.com)
+[![Telegram](/images/home/telegram.webp)](https://example.com)
+{.image-grid-3}
+```
+
+- 桌面端固定三列。
+- 单图最大 `180×120px`，保持比例并垂直居中。
+- 小于 `680px` 时自动上下排列。
+- 链接图片的 `alt` 应写对应平台名称。
+
 ### 手机端
 
 小于 `680px` 时：

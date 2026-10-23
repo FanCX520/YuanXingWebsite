@@ -258,6 +258,30 @@ VitePress 支持在 Markdown 图片后追加 CSS 类。当前主题提供以下�
 
 两张图会排成两列。中间用空行分开后，会变成上下两张独立图片。
 
+### 带链接的图片
+
+图片外层有链接时，布局类会应用到 `<a>`：
+
+```md
+[![商店截图](./images/store.webp)](https://example.com){.image-left}
+[![官网截图](./images/site.webp)](https://example.com){.image-right}
+```
+
+主题会约束链接宽度并让内部图片自适应。说明文字与图片组之间留一个空行，两张图片之间不要留空行。
+
+### 三图并排
+
+需要三列图片时使用专用网格：
+
+```md
+[![平台一](./images/platform-1.webp)](https://example.com)
+[![平台二](./images/platform-2.webp)](https://example.com)
+[![平台三](./images/platform-3.webp)](https://example.com)
+{.image-grid-3}
+```
+
+桌面端三列，单图最大 `180×120px`，手机端自动上下排列。不要用 `image-left` 和 `image-right` 拼出第三列。
+
 ### 手机端行为
 
 屏幕宽度小于 `680px` 时：
