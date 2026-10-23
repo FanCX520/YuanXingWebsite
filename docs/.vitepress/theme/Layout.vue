@@ -28,6 +28,7 @@ import { data as homeSections } from '../data/home.data.js'
 import { usePageSectionSnap } from '../../../src/composables/usePageSectionSnap.js'
 import { useSiteNavigation } from '../../../src/composables/useSiteNavigation.js'
 import { useViewTransitionNavigation } from '../../../src/composables/useViewTransitionNavigation.js'
+import { applyIntroEndState } from '../../../src/intro/introState.js'
 
 const LogoHero = defineAsyncComponent(() => import('../../../src/components/LogoHero.vue'))
 
@@ -49,13 +50,25 @@ const activeSection = ref('')
 const viewport = ref({ width: 1440, height: 900 })
 let introModule = null
 let introHandle = null
+let introLoadFailed = false
 let scrollFrame = 0
 let sceneReady = false
 let previousScrollRestoration = 'auto'
 
+function normalizeSitePath(pathname) {
+  const path = String(pathname || '/').replace(/\/+$/, '')
+  return `${path}/`
+}
+
+const siteHomePath = computed(() => normalizeSitePath(withBase('/')))
 const isHome = computed(() => {
-  if (route.path === '/') return true
-  return typeof window !== 'undefined' && window.location.pathname === '/'
+  const homePath = siteHomePath.value
+  if (normalizeSitePath(route.path) === homePath) return true
+
+  return (
+    typeof window !== 'undefined' &&
+    normalizeSitePath(window.location.pathname) === homePath
+  )
 })
 const isGamePage = computed(() => frontmatter.value?.type === 'game')
 
@@ -255,7 +268,9 @@ function waitForHomeRoute() {
 
 function handleBrowserBack() {
   if (gameReturnPending.value) return
-  if (window.location.pathname !== '/') return
+  if (normalizeSitePath(window.location.pathname) !== siteHomePath.value) {
+    return
+  }
   if (!document.querySelector('.game-article-hero')) return
 
   const gameKey = readActiveGameKey()
@@ -394,6 +409,7 @@ function applyStaticPageVisuals() {
 function resetHomeScene() {
   introHandle?.dispose()
   introHandle = null
+  introLoadFailed = false
   sceneReady = false
   sceneFailed.value = false
 }
@@ -406,8 +422,29 @@ function updateSceneFrame() {
   introModule?.updateIntroEngine()
 }
 
+function applyIntroLoadFallback() {
+  const scene = sceneReady ? logoHeroRef.value?.getScene?.() ?? null : null
+  applyIntroEndState(scene)
+  setIntroLock(false)
+}
+
+async function loadIntroModule() {
+  if (introModule) return true
+
+  try {
+    introModule = await import('../../../src/intro/intro.js')
+    introLoadFailed = false
+    return true
+  } catch (error) {
+    introLoadFailed = true
+    applyIntroLoadFallback()
+    console.error('开场模块加载失败，已切换到静态终态。', error)
+    return false
+  }
+}
+
 function startIntroIfReady() {
-  if (!isHome.value || !introModule || introHandle) return
+  if (!isHome.value || introLoadFailed || !introModule || introHandle) return
   if (!sceneReady && !sceneFailed.value) return
 
   introHandle = introModule.initIntro({
@@ -419,6 +456,10 @@ function startIntroIfReady() {
 function handleSceneReady() {
   sceneReady = true
   sceneFailed.value = false
+  if (introLoadFailed) {
+    applyIntroLoadFallback()
+    return
+  }
   startIntroIfReady()
 }
 
@@ -452,10 +493,8 @@ watch(isHome, async (home) => {
   setIntroLock(true)
   scrollToCurrentHomeSection()
 
-  if (!introModule) {
-    introModule = await import('../../../src/intro/intro.js')
-  }
-  if (!isHome.value) return
+  const loaded = await loadIntroModule()
+  if (!loaded || !isHome.value) return
   introModule.applyIntroFallback()
   startIntroIfReady()
 }, { flush: 'post' })
@@ -473,9 +512,11 @@ onMounted(async () => {
   if (isHome.value) scrollToCurrentHomeSection()
 
   if (isHome.value) {
-    introModule = await import('../../../src/intro/intro.js')
-    introModule.applyIntroFallback()
-    startIntroIfReady()
+    const loaded = await loadIntroModule()
+    if (loaded) {
+      introModule.applyIntroFallback()
+      startIntroIfReady()
+    }
     return
   }
 

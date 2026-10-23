@@ -1,4 +1,11 @@
 import { createTimeline, engine } from 'animejs'
+import {
+  CSS_END,
+  CSS_START,
+  SCENE_END,
+  SCENE_START,
+  writeIntroCss
+} from './introState.js'
 
 // 全站只保留一个 requestAnimationFrame：Anime 引擎由 logoScene 的渲染循环手动驱动。
 // 渲染循环里每帧先 engine.update()，再更新 uniform / 渲染，保证补间值当帧生效。
@@ -8,59 +15,7 @@ const INTRO_PARAM = new URLSearchParams(window.location.search).get('intro')
 const FREEZE_SECONDS = INTRO_PARAM?.startsWith('freeze-') ? Number(INTRO_PARAM.slice(7)) : null
 const INTRO_SEEN_KEY = 'yuanxing:intro-seen'
 
-// 场景侧：星核扩散半径 / 环带光波半径 / 星体与环带亮度 / 光晕 / 点光源 / 泛光 / 交互动效强度
-const SCENE_START = {
-  starReveal: -0.2,
-  ringReveal: 0,
-  star: 0,
-  ribbon: 0,
-  glow: 0,
-  light: 0,
-  bloom: 0,
-  motion: 0,
-  nav1: 0,
-  nav2: 0,
-  nav3: 0
-}
-
-const SCENE_END = {
-  starReveal: 1.7,
-  ringReveal: 1.25,
-  star: 1,
-  ribbon: 1,
-  glow: 1,
-  light: 1,
-  bloom: 1,
-  motion: 1,
-  nav1: 1,
-  nav2: 1,
-  nav3: 1
-}
-
-// DOM 侧：字标底色亮度 / 高光强度 / 高光扩散 / 高光中心高度 / 字标展开掩膜 / 背景浮现
-const CSS_START = {
-  '--intro-wordmark': '0.15',
-  '--intro-glow': '0',
-  '--intro-spread': '1.5',
-  '--intro-shift': '-30',
-  '--intro-reveal': '0',
-  '--intro-backdrop': '0',
-  '--intro-nav-label': '0'
-}
-
-const CSS_END = {
-  '--intro-wordmark': '1',
-  '--intro-glow': '1',
-  '--intro-spread': '1.25',
-  '--intro-shift': '0',
-  '--intro-reveal': '1',
-  '--intro-backdrop': '1',
-  '--intro-nav-label': '1'
-}
-
 const SAFETY_TIMEOUT = 9000
-
-const rootStyle = document.documentElement.style
 
 function hasSeenIntro() {
   try {
@@ -85,7 +40,7 @@ function shouldPlayIntro(reducedMotion) {
 }
 
 function writeCss(values) {
-  Object.entries(values).forEach(([name, value]) => rootStyle.setProperty(name, value))
+  writeIntroCss(values)
 }
 
 function applyScene(scene, values) {
