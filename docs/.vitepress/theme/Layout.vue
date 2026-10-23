@@ -26,9 +26,9 @@ import SiteHeader from '../../../src/components/navigation/SiteHeader.vue'
 import SpaceBackdrop from '../../../src/components/SpaceBackdrop.vue'
 import { data as homeSections } from '../data/home.data.js'
 import { usePageSectionSnap } from '../../../src/composables/usePageSectionSnap.js'
+import { useIntroController } from '../../../src/composables/useIntroController.js'
 import { useSiteNavigation } from '../../../src/composables/useSiteNavigation.js'
 import { useViewTransitionNavigation } from '../../../src/composables/useViewTransitionNavigation.js'
-import { applyIntroEndState } from '../../../src/intro/introState.js'
 import { getBrandGeometry } from '../../../src/layout/brandGeometry.js'
 
 const LogoHero = defineAsyncComponent(() => import('../../../src/components/LogoHero.vue'))
@@ -39,21 +39,15 @@ const { frontmatter } = useData()
 const logoHeroRef = ref(null)
 const heroAnchorRef = ref(null)
 const wordmarkRef = ref(null)
-const sceneFailed = ref(false)
 const navigationSceneReady = ref(false)
 const navigationSceneFailed = ref(false)
-const introLocked = ref(false)
 const routeLeaving = ref(false)
 const gameReturnPending = ref(false)
 const scrollProgress = ref(0)
 const logoReplacementProgress = ref(0)
 const activeSection = ref('')
 const viewport = ref({ width: 1440, height: 900 })
-let introModule = null
-let introHandle = null
-let introLoadFailed = false
 let scrollFrame = 0
-let sceneReady = false
 let previousScrollRestoration = 'auto'
 
 function normalizeSitePath(pathname) {
@@ -72,14 +66,24 @@ const isHome = computed(() => {
   )
 })
 const isGamePage = computed(() => frontmatter.value?.type === 'game')
+const {
+  introLocked,
+  sceneFailed,
+  enterHome: enterHomeIntro,
+  leaveHome: leaveHomeIntro,
+  updateSceneFrame,
+  handleSceneReady,
+  handleSceneError
+} = useIntroController({
+  isHome,
+  logoHeroRef
+})
 
 watch(isGamePage, (gamePage) => {
   if (gamePage && typeof window !== 'undefined') {
     rememberActiveGame(getGameCardKey({ url: route.path }))
   }
 }, { immediate: true })
-
-if (isHome.value) introLocked.value = true
 
 const { scrollToSection } = usePageSectionSnap({ enabled: isHome })
 const {
@@ -330,79 +334,6 @@ function getLogoTarget() {
   return heroAnchorRef.value
 }
 
-function setIntroLock(locked) {
-  introLocked.value = locked
-  if (typeof document === 'undefined') return
-  document.documentElement.classList.toggle('intro-locked', locked)
-}
-
-function applyStaticPageVisuals() {
-  document.documentElement.style.setProperty('--intro-backdrop', '1')
-}
-
-function resetHomeScene() {
-  introHandle?.dispose()
-  introHandle = null
-  introLoadFailed = false
-  sceneReady = false
-  sceneFailed.value = false
-}
-
-function finishIntro() {
-  setIntroLock(false)
-}
-
-function updateSceneFrame() {
-  introModule?.updateIntroEngine()
-}
-
-function applyIntroLoadFallback() {
-  const scene = sceneReady ? logoHeroRef.value?.getScene?.() ?? null : null
-  applyIntroEndState(scene)
-  setIntroLock(false)
-}
-
-async function loadIntroModule() {
-  if (introModule) return true
-
-  try {
-    introModule = await import('../../../src/intro/intro.js')
-    introLoadFailed = false
-    return true
-  } catch (error) {
-    introLoadFailed = true
-    applyIntroLoadFallback()
-    console.error('开场模块加载失败，已切换到静态终态。', error)
-    return false
-  }
-}
-
-function startIntroIfReady() {
-  if (!isHome.value || introLoadFailed || !introModule || introHandle) return
-  if (!sceneReady && !sceneFailed.value) return
-
-  introHandle = introModule.initIntro({
-    scene: sceneReady ? logoHeroRef.value?.getScene?.() ?? null : null,
-    onComplete: finishIntro
-  })
-}
-
-function handleSceneReady() {
-  sceneReady = true
-  sceneFailed.value = false
-  if (introLoadFailed) {
-    applyIntroLoadFallback()
-    return
-  }
-  startIntroIfReady()
-}
-
-function handleSceneError() {
-  sceneReady = false
-  sceneFailed.value = true
-  startIntroIfReady()
-}
-
 function handleNavigationSceneReady() {
   navigationSceneReady.value = true
   navigationSceneFailed.value = false
@@ -414,23 +345,16 @@ function handleNavigationSceneError() {
 }
 
 watch(isHome, async (home) => {
-  resetHomeScene()
   navigationSceneReady.value = false
   navigationSceneFailed.value = false
 
   if (!home) {
-    setIntroLock(false)
-    applyStaticPageVisuals()
+    leaveHomeIntro()
     return
   }
 
-  setIntroLock(true)
   scrollToCurrentHomeSection()
-
-  const loaded = await loadIntroModule()
-  if (!loaded || !isHome.value) return
-  introModule.applyIntroFallback()
-  startIntroIfReady()
+  await enterHomeIntro()
 }, { flush: 'post' })
 
 onMounted(async () => {
@@ -442,19 +366,14 @@ onMounted(async () => {
   updateViewport()
   updateScrollState()
   updateActiveSection()
-  setIntroLock(isHome.value)
   if (isHome.value) scrollToCurrentHomeSection()
 
   if (isHome.value) {
-    const loaded = await loadIntroModule()
-    if (loaded) {
-      introModule.applyIntroFallback()
-      startIntroIfReady()
-    }
+    await enterHomeIntro()
     return
   }
 
-  applyStaticPageVisuals()
+  leaveHomeIntro()
 })
 
 onBeforeUnmount(() => {
@@ -462,9 +381,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', scheduleViewportUpdate)
   window.removeEventListener('resize', scheduleViewportUpdate)
   if (scrollFrame) window.cancelAnimationFrame(scrollFrame)
-  introHandle?.dispose()
-  introHandle = null
-  setIntroLock(false)
   window.history.scrollRestoration = previousScrollRestoration
 })
 </script>
