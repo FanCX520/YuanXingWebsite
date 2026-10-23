@@ -37,10 +37,7 @@ jobs:
       - name: Build site
         run: npm run build
         env:
-          SITE_BASE: /
-
-      - name: Add custom domain
-        run: printf '%s\n' 'ourselves.cv' > dist/CNAME
+          SITE_BASE: /YuanXingWebsite/
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
