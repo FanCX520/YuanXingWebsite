@@ -33,18 +33,16 @@ html.intro-locked body {
   isolation: isolate;
   min-height: 100vh;
   background: transparent;
-  transition: opacity 180ms ease, transform 180ms ease;
+  transition: opacity 180ms ease;
 }
 
 .site-shell--route-leaving {
   opacity: 0;
-  transform: scale(0.996);
   pointer-events: none;
 }
 
 html.route-fallback-leaving .site-shell {
   opacity: 0;
-  transform: scale(0.996);
   pointer-events: none;
 }
 

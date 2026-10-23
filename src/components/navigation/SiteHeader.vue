@@ -119,6 +119,7 @@ function getItemStyle(item) {
       :class="{ 'is-active': item.active }"
       :href="item.href"
       :style="getItemStyle(item)"
+      target="_self"
       :data-section-link="item.id"
       :aria-current="item.active ? 'location' : undefined"
       @click="emit('item-select', $event, item)"

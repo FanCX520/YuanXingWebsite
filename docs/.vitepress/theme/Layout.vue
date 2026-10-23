@@ -50,6 +50,7 @@ const isHome = computed(() => {
 })
 const isGamePage = computed(() => frontmatter.value?.type === 'game')
 const isNotFound = computed(() => page.value?.isNotFound === true)
+const siteScrollOffset = site.value.scrollOffset ?? 0
 const {
   introLocked,
   sceneFailed,
@@ -71,7 +72,14 @@ const {
   refreshLayout
 } = useHomeScrollState({ isHome })
 
-const { scrollToSection } = usePageSectionSnap({ enabled: isHome })
+const {
+  scrollToSection,
+  suspendAutoAlignment,
+  resumeAutoAlignment
+} = usePageSectionSnap({
+  enabled: isHome,
+  scrollOffset: siteScrollOffset
+})
 const {
   routeLeaving,
   restoreHomeAnchor,
@@ -83,8 +91,10 @@ const {
   isGamePage,
   siteHomePath,
   scrollToSection,
-  scrollOffset: site.value.scrollOffset ?? 0,
-  refreshHomeScrollState: refreshLayout
+  scrollOffset: siteScrollOffset,
+  refreshHomeScrollState: refreshLayout,
+  suspendHomeAlignment: suspendAutoAlignment,
+  resumeHomeAlignment: resumeAutoAlignment
 })
 
 const {

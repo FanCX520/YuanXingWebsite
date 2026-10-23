@@ -25,16 +25,28 @@ export function getDocumentTop(element) {
   return top - new window.DOMMatrixReadOnly(transform).m42
 }
 
-export function usePageSectionSnap({ enabled }) {
+export function getScrollTargetTop(element, scrollOffset = 0) {
+  const top = getDocumentTop(element)
+  if (!element.classList.contains('home-section')) return top
+
+  const paddingTop = Number.parseFloat(
+    window.getComputedStyle(element).paddingTop
+  ) || 0
+  return top - scrollOffset + paddingTop
+}
+
+export function usePageSectionSnap({ enabled, scrollOffset = 0 }) {
   let idleTimer = 0
   let snapFrame = 0
   let snapToken = 0
   let stopEnabledWatch = null
   let isSnapping = false
+  let alignmentSuspended = false
 
   function canSnap() {
     return (
       enabled.value &&
+      !alignmentSuspended &&
       window.innerWidth > 680 &&
       !window.matchMedia('(prefers-reduced-motion: reduce)').matches
     )
@@ -67,9 +79,18 @@ export function usePageSectionSnap({ enabled }) {
     finishSnap()
   }
 
+  function suspendAutoAlignment() {
+    alignmentSuspended = true
+    cancelSnap()
+  }
+
+  function resumeAutoAlignment() {
+    alignmentSuspended = false
+  }
+
   function getSnapTargets() {
     return Array.from(document.querySelectorAll('.home-hero, .home-section'))
-      .map((element) => getDocumentTop(element))
+      .map((element) => getScrollTargetTop(element, scrollOffset))
       .sort((a, b) => a - b)
   }
 
@@ -141,7 +162,7 @@ export function usePageSectionSnap({ enabled }) {
     finishSnap()
     if (href) window.history.pushState(null, '', href)
 
-    const destination = getDocumentTop(element)
+    const destination = getScrollTargetTop(element, scrollOffset)
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     if (reducedMotion || Math.abs(destination - window.scrollY) <= 1) {
@@ -159,7 +180,7 @@ export function usePageSectionSnap({ enabled }) {
   }
 
   function handleScrollEnd() {
-    if (!enabled.value) return
+    if (!enabled.value || alignmentSuspended) return
 
     if (isSnapping) return
 
@@ -209,5 +230,9 @@ export function usePageSectionSnap({ enabled }) {
     clearIdleTimer()
   })
 
-  return { scrollToSection }
+  return {
+    scrollToSection,
+    suspendAutoAlignment,
+    resumeAutoAlignment
+  }
 }

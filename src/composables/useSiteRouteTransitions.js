@@ -14,7 +14,7 @@ import {
   rememberActiveGame,
   waitForGameCarouselReady
 } from '../components/games/gameCarouselState.js'
-import { getDocumentTop } from './usePageSectionSnap.js'
+import { getScrollTargetTop } from './usePageSectionSnap.js'
 import { useViewTransitionNavigation } from './useViewTransitionNavigation.js'
 
 export function useSiteRouteTransitions({
@@ -24,7 +24,9 @@ export function useSiteRouteTransitions({
   siteHomePath,
   scrollToSection,
   scrollOffset = 0,
-  refreshHomeScrollState = () => {}
+  refreshHomeScrollState = () => {},
+  suspendHomeAlignment = () => {},
+  resumeHomeAlignment = () => {}
 }) {
   const routeLeaving = ref(false)
   const gameReturnPending = ref(false)
@@ -72,12 +74,8 @@ export function useSiteRouteTransitions({
     const target = findAnchorTarget(anchorId)
     if (!target) return false
 
-    const paddingTop = Number.parseFloat(
-      window.getComputedStyle(target).paddingTop
-    ) || 0
-
     window.scrollTo({
-      top: getDocumentTop(target) - scrollOffset + paddingTop,
+      top: getScrollTargetTop(target, scrollOffset),
       behavior: 'auto'
     })
     refreshHomeScrollState()
@@ -120,6 +118,50 @@ export function useSiteRouteTransitions({
     }
 
     return applyHomeAnchor(`#${anchorId}`)
+  }
+
+  function waitForStableHomeAnchor(anchor) {
+    return new Promise((resolve) => {
+      const anchorId = getAnchorId(anchor)
+      const startedAt = window.performance.now()
+      let previousTop = null
+      let stableFrames = 0
+
+      const check = () => {
+        if (!isHome.value) {
+          resolve(false)
+          return
+        }
+
+        const target = findAnchorTarget(anchorId)
+        const top = target
+          ? getScrollTargetTop(target, scrollOffset)
+          : null
+
+        if (
+          top !== null &&
+          previousTop !== null &&
+          Math.abs(top - previousTop) <= 0.1
+        ) {
+          stableFrames += 1
+        } else {
+          stableFrames = 0
+        }
+
+        previousTop = top
+        if (
+          stableFrames >= 2 ||
+          window.performance.now() - startedAt >= 350
+        ) {
+          resolve(top !== null)
+          return
+        }
+
+        window.requestAnimationFrame(check)
+      }
+
+      window.requestAnimationFrame(check)
+    })
   }
 
   function waitForHomeRoute() {
@@ -180,6 +222,7 @@ export function useSiteRouteTransitions({
   async function handleGameCatalogReturn() {
     if (gameReturnPending.value) return
     gameReturnPending.value = true
+    suspendHomeAlignment()
     beginGameReturn(getGameCardKey({ url: route.path }))
 
     try {
@@ -194,12 +237,14 @@ export function useSiteRouteTransitions({
       })
     } finally {
       gameReturnPending.value = false
+      resumeHomeAlignment()
     }
   }
 
   async function leaveHomeTo(href) {
     if (routeLeaving.value) return
 
+    suspendHomeAlignment()
     routeLeaving.value = true
     await new Promise((resolve) => window.setTimeout(resolve, 180))
 
@@ -207,7 +252,10 @@ export function useSiteRouteTransitions({
       await router.go(href)
       await nextTick()
       await restoreHomeAnchor()
+      await waitForStableHomeAnchor()
+      await restoreHomeAnchor()
     } finally {
+      resumeHomeAlignment()
       window.setTimeout(() => {
         routeLeaving.value = false
       }, 0)
