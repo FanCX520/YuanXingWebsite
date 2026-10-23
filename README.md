@@ -45,6 +45,7 @@ npm run preview
 │  ├─ index.md                     # 首页入口与首页 section 组件
 │  ├─ home/                        # 首页文案源，不生成独立路由
 │  ├─ games/<slug>/index.md        # 游戏 Wiki 页面
+│  ├─ games/<slug>/images/         # 游戏正文图片
 │  ├─ public/                      # 站点根目录静态资源
 │  └─ .vitepress/
 │     ├─ config.mjs                # VitePress 配置
@@ -59,7 +60,6 @@ npm run preview
 │  ├─ layout/                      # 品牌几何等纯布局计算
 │  ├─ intro/                       # 首页开场时间轴
 │  └─ three/                       # Three.js 场景、几何、材质和后处理
-├─ 素材/                           # 源素材，不直接作为站点资源
 ├─ PROJECT_PLAN.md                 # 当前方案与体验契约
 ├─ PROJECT_LOG.md                  # 已发生事实和关键提交
 ├─ TODO.md                         # 当前待办与发布准备
@@ -78,7 +78,8 @@ npm run preview
 - 首页场景、开场锁定和滚动进度。
 - 站点头部、导航目标位置和浏览器历史导航。
 - 游戏详情页的 frontmatter 头部注入。
-- 浏览器后退、共享元素动画和滚动恢复。
+- 浏览器后退、共享元素动画和首页锚点恢复。
+- 页面内容单独淡出，导航栏、星画布和毛玻璃背景保持可见。
 
 具体职责已拆分到：
 
@@ -132,6 +133,8 @@ npm run preview
 
 不支持 View Transitions 的浏览器会使用淡出淡入。减少动态效果模式下直接切页。
 
+导航链接由站点处理器接管，避免 VitePress 在进入首页前抢先执行 hash 滚动。“游戏目录”、其他首页锚点、首页内部导航和滚轮吸附共享同一套导航偏移落点。页面离场只淡出正文内容；固定导航、导航星和毛玻璃不参与透明度动画。
+
 ## 内容维护
 
 ### 首页文案
@@ -158,7 +161,7 @@ order: 20
 ### 新增游戏
 
 1. 新建 `docs/games/<slug>/index.md`。
-2. 在同目录放 Wiki 图片，或在 `docs/public/images/games/` 放共享封面。
+2. 在同目录的 `images/` 放 Wiki 正文图片，在 `docs/public/images/games/` 放共享封面。
 3. 填写 frontmatter。
 4. 正文直接写介绍、状态说明、截图和 Wiki 内容。
 
@@ -200,9 +203,11 @@ draft: false
 ### 图片
 
 - `docs/public/` 下的文件会从站点根路径直接访问。
-- `docs/games/<slug>/images/` 适合同一 Wiki 的正文图片，可使用相对路径。
-- `素材/` 保存源文件，不保证能直接从站点访问。
-- 正式资源优先使用 WebP/AVIF；文件命名优先使用 ASCII slug。
+- 游戏封面放在 `docs/public/images/games/`，由 frontmatter 使用站点绝对路径引用。
+- `docs/games/<slug>/images/` 保存同一 Wiki 的正文图片，Markdown 使用相对路径。
+- 封面和正文图即使画面相同，也分别保留公共封面资产与游戏目录内的正文副本。
+- 当前正式游戏图片使用 WebP；现有中文文件名继续保留，新增文件可优先使用稳定的 ASCII slug。
+- `docs/games/` 下的三份游戏 Markdown 同时作为维护示例：分别演示图文环绕、全宽图片和双图排版。
 
 Markdown 图片支持以下布局类：
 
@@ -239,8 +244,6 @@ Markdown 图片支持以下布局类：
 ?intro=on          强制重播
 ?intro=off         直接跳过
 ?intro=freeze-2.4  冻结在指定秒数
-?motion=off        关闭主场景持续运动
-?view=side         使用主星侧视图
 ```
 
 需要重新测试首次访问时，可清除当前站点的 `sessionStorage` 后刷新。
@@ -257,7 +260,9 @@ yuanxing:intro-seen
 ### 动画与滚动
 
 - 页面章节使用可取消的自定义对齐，不使用原生 Scroll Snap。
-- 浏览器滚动恢复设为手动模式，首页挂载完成后再定位目标章节。
+- 浏览器滚动恢复设为手动模式；显式导航在 View Transition 捕获新快照前完成锚点定位。
+- 导航、区块滚动和自动吸附使用同一套 `scrollOffset + padding-top` 落点。
+- 页面离场只淡出内容层，固定导航和背景不改变坐标或透明度。
 - 游戏卡片的共享元素动画依赖 DOM 元素名称和轮播同步定位。
 - 修改轮播尺寸、封面比例或详情页头部时，必须复查进入和返回动画。
 
@@ -288,6 +293,9 @@ npm run build
 - 游戏卡片排序、封面叠字、进入详情页和返回动画。
 - 浏览器后退、直接访问详情页和刷新。
 - 返回游戏目录后恢复原卡片，无首卡闪烁或滚动错位。
+- 详情页返回首页时导航星不再下移，正文淡出期间导航栏和毛玻璃保持可见。
+- 导航返回后不再出现自动吸附造成的二次位移。
+- 首页封面使用 public 绝对路径，游戏正文图片使用各自目录内的相对路径。
 - `prefers-reduced-motion` 和无 WebGL 降级。
 - 浏览器控制台无错误。
 
@@ -299,9 +307,10 @@ npm run build
 
 - `cleanUrls: true` 使用无 `.html` 的干净 URL。
 - `outDir: '../dist'` 将静态产物输出到项目根目录的 `dist/`。
-- `srcExclude: ['home/**']` 阻止首页内容片段成为独立路由。
+- `srcExclude: ['home/**', 'games/README.md']` 阻止首页内容片段和游戏维护说明成为公开路由。
+- `sitemap.hostname` 使用正式域名 `https://ourselves.cv/`，并与 `SITE_BASE` 组合生成 sitemap URL。
 
-部署时将 `dist/` 作为静态目录发布。站点默认使用根路径 `/`；子路径部署通过 `SITE_BASE` 注入 base：
+正式站点默认使用根路径 `https://ourselves.cv/`。部署时将 `dist/` 作为静态目录发布；如未来改为子路径部署，通过 `SITE_BASE` 注入 base：
 
 ```bash
 SITE_BASE=/yuanxing-website/ npm run build
@@ -317,6 +326,7 @@ npm run build
 `SITE_BASE` 会自动用于 VitePress base、favicon、首页判定、导航和游戏路由。部署后重新检查：
 
 - 品牌 LOGO、封面和背景图路径。
+- `sitemap.xml` 中的正式域名、基础路径和游戏路由。
 - 游戏详情页直接访问。
 - 导航链接和共享元素动画。
 - Three.js 材质和静态资源请求。

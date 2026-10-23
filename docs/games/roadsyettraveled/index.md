@@ -5,7 +5,7 @@ title: 未行之途
 description: 未行之途的汉化项目资料页。
 status: translating
 order: 10
-cover: /images/games/未行之途.jpg
+cover: /images/games/未行之途.webp
 draft: false
 ---
 
@@ -15,7 +15,7 @@ draft: false
 
 这里介绍游戏类型、故事背景和汉化项目范围。
 
-![未行之途封面](./images/未行之途.jpg){.image-right .image-wrap}
+![未行之途封面](./images/未行之途.webp){.image-right .image-wrap}
 
 这一段会环绕在图片左侧。建议先写一句总体介绍，再补充汉化工作的重点和当前范围。
 

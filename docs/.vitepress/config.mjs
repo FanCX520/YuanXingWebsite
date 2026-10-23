@@ -2,6 +2,10 @@ import { defineConfig } from 'vitepress'
 
 const siteBase = process.env.SITE_BASE || '/'
 const normalizedBase = siteBase.endsWith('/') ? siteBase : `${siteBase}/`
+const sitemapHostname = new URL(
+  normalizedBase,
+  'https://ourselves.cv/'
+).href
 
 export default defineConfig({
   base: normalizedBase,
@@ -12,6 +16,9 @@ export default defineConfig({
   srcExclude: ['home/**', 'games/README.md'],
   outDir: '../dist',
   scrollOffset: 88,
+  sitemap: {
+    hostname: sitemapHostname
+  },
   head: [
     [
       'link',

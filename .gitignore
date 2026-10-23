@@ -7,7 +7,8 @@ docs/.vitepress/cache/
 .env
 .env.*
 tools/
-.screenshots/
+.mimocode/
 AGENTS.md
 PROJECT_LOG.md
 PROJECT_PLAN.md
+TODO.md
