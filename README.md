@@ -56,6 +56,7 @@ npm run preview
 │  │  ├─ games/                    # 游戏轮播、封面和详情页头部
 │  │  └─ navigation/               # 站点导航和详情页导航星画布
 │  ├─ composables/                 # 导航、滚动、页面显现和路由过渡
+│  ├─ layout/                      # 品牌几何等纯布局计算
 │  ├─ intro/                       # 首页开场时间轴
 │  └─ three/                       # Three.js 场景、几何、材质和后处理
 ├─ 素材/                           # 源素材，不直接作为站点资源
@@ -71,7 +72,7 @@ npm run preview
 
 ### Layout
 
-`docs/.vitepress/theme/Layout.vue` 是全站编排层，负责：
+`docs/.vitepress/theme/Layout.vue` 是全站组合层，负责：
 
 - 首页和游戏详情页切换。
 - 首页场景、开场锁定和滚动进度。
@@ -79,7 +80,14 @@ npm run preview
 - 游戏详情页的 frontmatter 头部注入。
 - 浏览器后退、共享元素动画和滚动恢复。
 
-组件本身尽量不直接承担路由和全站状态。实现新页面时，先判断逻辑属于 Layout、页面组件还是独立 composable。
+具体职责已拆分到：
+
+- `useIntroController.js`：开场加载、锁定、降级和场景状态。
+- `useHomeScrollState.js`：唯一的首页滚动/缩放监听、视口和章节状态。
+- `useSiteRouteTransitions.js`：品牌首页、章节导航、游戏返回和浏览器后退。
+- `brandGeometry.js`：品牌 LOGO、锚点和字标的纯几何计算。
+
+组件本身尽量不直接承担路由和全站状态。新增功能时优先扩展对应模块，不再向 Layout 堆叠监听器和业务分支。
 
 ### 导航
 
