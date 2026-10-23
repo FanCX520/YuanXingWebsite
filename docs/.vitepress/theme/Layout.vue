@@ -29,6 +29,7 @@ import { usePageSectionSnap } from '../../../src/composables/usePageSectionSnap.
 import { useSiteNavigation } from '../../../src/composables/useSiteNavigation.js'
 import { useViewTransitionNavigation } from '../../../src/composables/useViewTransitionNavigation.js'
 import { applyIntroEndState } from '../../../src/intro/introState.js'
+import { getBrandGeometry } from '../../../src/layout/brandGeometry.js'
 
 const LogoHero = defineAsyncComponent(() => import('../../../src/components/LogoHero.vue'))
 
@@ -86,12 +87,6 @@ const {
   transitionExistingNavigation
 } = useViewTransitionNavigation()
 
-const brandProgress = computed(() => {
-  if (!isHome.value) return 1
-
-  const progress = scrollProgress.value
-  return progress * progress * (3 - 2 * progress)
-})
 const {
   items: navigationTargets,
   glassVisible: navigationGlassVisible
@@ -108,76 +103,15 @@ const navigationFallback = computed(() => {
   return !navigationSceneReady.value || navigationSceneFailed.value
 })
 
-const brandLayout = computed(() => {
-  const { width } = viewport.value
-  const compact = width <= 680
-  const insetX = compact ? 18 : 34
-  const insetY = compact ? 16 : 26
-  const logoSize = compact ? 30 : 38
-  const gap = compact ? 7 : 9
-
-  return {
-    insetX,
-    insetY,
-    logoSize,
-    logoCenterX: insetX + logoSize / 2,
-    logoCenterY: insetY + logoSize / 2,
-    wordmarkLeft: insetX + logoSize + gap,
-    wordmarkFontSize: compact ? 13 : 14
-  }
-})
-
-const heroAnchorStyle = computed(() => {
-  const { width, height } = viewport.value
-  const layout = brandLayout.value
-  const progress = brandProgress.value
-  const startSize = Math.min(width * 0.68, 620, height * 0.72)
-  const size = lerp(startSize, layout.logoSize, progress)
-
-  return {
-    width: `${size}px`,
-    height: `${size}px`,
-    left: `${lerp(width / 2, layout.logoCenterX, progress)}px`,
-    top: `${lerp(height / 2, layout.logoCenterY, progress)}px`
-  }
-})
-
-const wordmarkStyle = computed(() => {
-  const { width, height } = viewport.value
-  const layout = brandLayout.value
-  const progress = brandProgress.value
-  const startSize = Math.min(width * 0.68, 620, height * 0.72)
-  const startFontSize = startSize * 0.195
-  const startTop = height / 2 + startSize * 0.425 + 20
-
-  return {
-    left: `${lerp(width / 2, layout.wordmarkLeft, progress)}px`,
-    top: `${lerp(startTop, layout.logoCenterY, progress)}px`,
-    fontSize: `${lerp(startFontSize, layout.wordmarkFontSize, progress)}px`,
-    transform: `translate(${lerp(-50, 0, progress)}%, ${lerp(-56, -50, progress)}%)`
-  }
-})
-
-const brandReady = computed(() => isHome.value && brandProgress.value > 0.96)
-
-const brandHomeStyle = computed(() => {
-  const layout = brandLayout.value
-  const padding = 8
-  const wordmarkWidth = layout.wordmarkFontSize * 4.9
-
-  return {
-    left: `${layout.insetX - padding}px`,
-    top: `${layout.insetY - padding}px`,
-    width: `${layout.wordmarkLeft - layout.insetX + wordmarkWidth + padding * 2}px`,
-    height: `${layout.logoSize + padding * 2}px`,
-    '--brand-logo-size': `${layout.logoSize}px`,
-    '--brand-padding': `${padding}px`
-  }
-})
-
-function lerp(from, to, progress) {
-  return from + (to - from) * progress
-}
+const brandGeometry = computed(() => getBrandGeometry({
+  viewport: viewport.value,
+  scrollProgress: scrollProgress.value,
+  isHome: isHome.value
+}))
+const heroAnchorStyle = computed(() => brandGeometry.value.heroAnchorStyle)
+const wordmarkStyle = computed(() => brandGeometry.value.wordmarkStyle)
+const brandHomeStyle = computed(() => brandGeometry.value.brandHomeStyle)
+const brandReady = computed(() => brandGeometry.value.brandReady)
 
 function updateViewport() {
   viewport.value = { width: window.innerWidth, height: window.innerHeight }
