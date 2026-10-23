@@ -33,16 +33,22 @@ html.intro-locked body {
   isolation: isolate;
   min-height: 100vh;
   background: transparent;
+}
+
+.site-shell__content {
   transition: opacity 180ms ease;
 }
 
 .site-shell--route-leaving {
-  opacity: 0;
   pointer-events: none;
 }
 
-html.route-fallback-leaving .site-shell {
+.site-shell--route-leaving .site-shell__content,
+html.route-fallback-leaving .site-shell__content {
   opacity: 0;
+}
+
+html.route-fallback-leaving .site-shell {
   pointer-events: none;
 }
 
@@ -490,7 +496,7 @@ html.game-route-transitioning .game-article-body {
     transition: none;
   }
 
-  .site-shell {
+  .site-shell__content {
     transition: none;
   }
 }

@@ -206,58 +206,60 @@ onMounted(async () => {
       @scene-error="handleNavigationSceneError"
     />
 
-    <BrandWordmark
-      v-if="isHome"
-      ref="wordmarkRef"
-      heading-id="home-title"
-      :travel-style="wordmarkStyle"
-    />
+    <div class="site-shell__content">
+      <BrandWordmark
+        v-if="isHome"
+        ref="wordmarkRef"
+        heading-id="home-title"
+        :travel-style="wordmarkStyle"
+      />
 
-    <main v-if="isHome" class="home-page" :style="{ '--scroll-progress': scrollProgress }">
-      <section class="home-hero" aria-labelledby="home-title">
-        <div ref="heroAnchorRef" class="hero-logo-anchor" :style="heroAnchorStyle" />
-        <img
-          class="hero-logo-replacement"
-          :src="withBase('/images/brand/logo-mark.png')"
-          :style="[heroAnchorStyle, { opacity: logoReplacementProgress }]"
-          alt=""
-          aria-hidden="true"
-          decoding="async"
-        />
-        <LogoHero
-          ref="logoHeroRef"
-          class="home-hero__scene"
-          :on-frame="updateSceneFrame"
-          :get-logo-target="getLogoTarget"
-          :get-main-logo-opacity="getMainLogoOpacity"
-          :get-navigation-targets="getNavigationTargets"
-          @light-update="updateWordmarkLight"
-          @scene-ready="handleSceneReady"
-          @scene-error="handleSceneError"
-        />
-      </section>
-      <div class="page-content" :inert="introLocked ? '' : null">
-        <Content />
-      </div>
-    </main>
-
-    <main
-      v-else
-      class="page-content page-content--article"
-      :class="{ 'page-content--game': isGamePage }"
-    >
-      <NotFoundPage v-if="isNotFound" />
-      <template v-else>
-        <GameArticleHero
-          v-if="isGamePage"
-          :frontmatter="frontmatter"
-        />
-        <div v-if="isGamePage" class="game-article-body">
+      <main v-if="isHome" class="home-page" :style="{ '--scroll-progress': scrollProgress }">
+        <section class="home-hero" aria-labelledby="home-title">
+          <div ref="heroAnchorRef" class="hero-logo-anchor" :style="heroAnchorStyle" />
+          <img
+            class="hero-logo-replacement"
+            :src="withBase('/images/brand/logo-mark.png')"
+            :style="[heroAnchorStyle, { opacity: logoReplacementProgress }]"
+            alt=""
+            aria-hidden="true"
+            decoding="async"
+          />
+          <LogoHero
+            ref="logoHeroRef"
+            class="home-hero__scene"
+            :on-frame="updateSceneFrame"
+            :get-logo-target="getLogoTarget"
+            :get-main-logo-opacity="getMainLogoOpacity"
+            :get-navigation-targets="getNavigationTargets"
+            @light-update="updateWordmarkLight"
+            @scene-ready="handleSceneReady"
+            @scene-error="handleSceneError"
+          />
+        </section>
+        <div class="page-content" :inert="introLocked ? '' : null">
           <Content />
         </div>
-        <Content v-else />
-      </template>
-    </main>
+      </main>
+
+      <main
+        v-else
+        class="page-content page-content--article"
+        :class="{ 'page-content--game': isGamePage }"
+      >
+        <NotFoundPage v-if="isNotFound" />
+        <template v-else>
+          <GameArticleHero
+            v-if="isGamePage"
+            :frontmatter="frontmatter"
+          />
+          <div v-if="isGamePage" class="game-article-body">
+            <Content />
+          </div>
+          <Content v-else />
+        </template>
+      </main>
+    </div>
 
     <div v-if="isHome && introLocked" class="intro-input-lock" aria-hidden="true" />
   </div>
