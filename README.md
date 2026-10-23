@@ -35,7 +35,7 @@ npm run build
 npm run preview
 ```
 
-构建产物输出到 `dist/`，该目录不提交。
+构建产物会输出到忽略目录，不提交。
 
 ## 项目结构
 
@@ -62,7 +62,7 @@ npm run preview
 │  └─ three/                       # Three.js 场景、几何、材质和后处理
 ```
 
-`dist/`、`docs/.vitepress/cache/`、`.screenshots/` 和 `tools/` 属于生成或调试输出，不应手工维护或提交。
+构建缓存、截图和调试输出不应手工维护或提交。
 
 ## 页面架构
 
@@ -270,7 +270,7 @@ yuanxing:intro-seen
 - 临时 HTTP 服务、浏览器和调试进程在验证结束后关闭。
 - `prefers-reduced-motion` 必须得到完整支持。
 - WebGL 失败时，导航、正文和游戏入口仍必须可用。
-- 不要提交 `dist/`、缓存、截图或调试工具输出。
+- 不要提交构建产物、缓存、截图或调试工具输出。
 - 视觉改动完成后优先使用 Codex 内置浏览器调试，并检查桌面与手机视口。
 
 ## 验证清单
@@ -302,11 +302,11 @@ npm run build
 `docs/.vitepress/config.mjs` 中配置站点标题、语言、路由和输出目录：
 
 - `cleanUrls: true` 使用无 `.html` 的干净 URL。
-- `outDir: '../dist'` 将静态产物输出到项目根目录的 `dist/`。
+- 构建产物写入仓库的忽略目录。
 - `srcExclude: ['home/**', 'games/README.md']` 阻止首页内容片段和游戏维护说明成为公开路由。
 - `sitemap.hostname` 使用正式域名 `https://ourselves.cv/`，并与 `SITE_BASE` 组合生成 sitemap URL。
 
-正式站点默认使用根路径 `https://ourselves.cv/`。部署时将 `dist/` 作为静态目录发布；如未来改为子路径部署，通过 `SITE_BASE` 注入 base：
+正式站点默认使用根路径 `https://ourselves.cv/`。部署时发布构建产物目录；如未来改为子路径部署，通过 `SITE_BASE` 注入 base：
 
 ```bash
 SITE_BASE=/yuanxing-website/ npm run build
