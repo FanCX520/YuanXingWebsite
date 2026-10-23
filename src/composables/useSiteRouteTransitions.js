@@ -14,6 +14,7 @@ import {
   rememberActiveGame,
   waitForGameCarouselReady
 } from '../components/games/gameCarouselState.js'
+import { getDocumentTop } from './usePageSectionSnap.js'
 import { useViewTransitionNavigation } from './useViewTransitionNavigation.js'
 
 export function useSiteRouteTransitions({
@@ -21,7 +22,9 @@ export function useSiteRouteTransitions({
   isHome,
   isGamePage,
   siteHomePath,
-  scrollToSection
+  scrollToSection,
+  scrollOffset = 0,
+  refreshHomeScrollState = () => {}
 }) {
   const routeLeaving = ref(false)
   const gameReturnPending = ref(false)
@@ -43,22 +46,80 @@ export function useSiteRouteTransitions({
     }
   }, { immediate: true })
 
-  function scrollToCurrentHomeSection() {
-    const hash = route.hash?.slice(1)
-    let target = null
+  function getAnchorId(anchor) {
+    const source = anchor ?? window.location.hash
+    return String(source).replace(/^#/, '')
+  }
 
-    if (hash) {
-      try {
-        target = document.getElementById(decodeURIComponent(hash))
-      } catch {
-        target = document.getElementById(hash)
-      }
+  function findAnchorTarget(anchorId) {
+    try {
+      return document.getElementById(decodeURIComponent(anchorId))
+    } catch {
+      return document.getElementById(anchorId)
+    }
+  }
+
+  function applyHomeAnchor(anchor) {
+    if (!isHome.value) return false
+
+    const anchorId = getAnchorId(anchor)
+    if (!anchorId) {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+      refreshHomeScrollState()
+      return true
     }
 
+    const target = findAnchorTarget(anchorId)
+    if (!target) return false
+
+    const paddingTop = Number.parseFloat(
+      window.getComputedStyle(target).paddingTop
+    ) || 0
+
     window.scrollTo({
-      top: target?.offsetTop ?? 0,
+      top: getDocumentTop(target) - scrollOffset + paddingTop,
       behavior: 'auto'
     })
+    refreshHomeScrollState()
+    return true
+  }
+
+  function waitForHomeAnchor(anchorId) {
+    return new Promise((resolve) => {
+      let observer = null
+      let timeout = 0
+
+      const finish = (target) => {
+        observer?.disconnect()
+        window.clearTimeout(timeout)
+        resolve(target)
+      }
+
+      const target = findAnchorTarget(anchorId)
+      if (target) {
+        finish(target)
+        return
+      }
+
+      observer = new MutationObserver(() => {
+        const nextTarget = findAnchorTarget(anchorId)
+        if (nextTarget) finish(nextTarget)
+      })
+      observer.observe(document.body, { childList: true, subtree: true })
+      timeout = window.setTimeout(() => finish(null), 800)
+    })
+  }
+
+  async function restoreHomeAnchor(anchor) {
+    if (!isHome.value) return false
+
+    const anchorId = getAnchorId(anchor)
+    if (!anchorId) return applyHomeAnchor()
+    if (!findAnchorTarget(anchorId)) {
+      await waitForHomeAnchor(anchorId)
+    }
+
+    return applyHomeAnchor(`#${anchorId}`)
   }
 
   function waitForHomeRoute() {
@@ -123,7 +184,12 @@ export function useSiteRouteTransitions({
 
     try {
       await navigateWithTransition(withBase('/#games'), {
-        afterRouteChange: waitForGameCarouselReady,
+        afterRouteChange: async () => {
+          await restoreHomeAnchor('games')
+          await waitForGameCarouselReady()
+          await restoreHomeAnchor('games')
+          await nextTick()
+        },
         onFinished: endGameReturn
       })
     } finally {
@@ -139,6 +205,8 @@ export function useSiteRouteTransitions({
 
     try {
       await router.go(href)
+      await nextTick()
+      await restoreHomeAnchor()
     } finally {
       window.setTimeout(() => {
         routeLeaving.value = false
@@ -218,7 +286,7 @@ export function useSiteRouteTransitions({
 
   return {
     routeLeaving,
-    scrollToCurrentHomeSection,
+    restoreHomeAnchor,
     handleSectionNavigation,
     handleHomeNavigation
   }

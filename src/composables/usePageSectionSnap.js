@@ -17,7 +17,7 @@ const SCROLL_KEYS = new Set([
   ' '
 ])
 
-function getDocumentTop(element) {
+export function getDocumentTop(element) {
   const top = element.getBoundingClientRect().top + window.scrollY
   const transform = window.getComputedStyle(element).transform
   if (transform === 'none' || !window.DOMMatrixReadOnly) return top

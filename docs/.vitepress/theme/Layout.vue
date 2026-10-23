@@ -26,7 +26,7 @@ import { getBrandGeometry } from '../../../src/layout/brandGeometry.js'
 const LogoHero = defineAsyncComponent(() => import('../../../src/components/LogoHero.vue'))
 
 const route = useRoute()
-const { frontmatter, page } = useData()
+const { frontmatter, page, site } = useData()
 const logoHeroRef = ref(null)
 const heroAnchorRef = ref(null)
 const wordmarkRef = ref(null)
@@ -74,7 +74,7 @@ const {
 const { scrollToSection } = usePageSectionSnap({ enabled: isHome })
 const {
   routeLeaving,
-  scrollToCurrentHomeSection,
+  restoreHomeAnchor,
   handleSectionNavigation,
   handleHomeNavigation
 } = useSiteRouteTransitions({
@@ -82,7 +82,9 @@ const {
   isHome,
   isGamePage,
   siteHomePath,
-  scrollToSection
+  scrollToSection,
+  scrollOffset: site.value.scrollOffset ?? 0,
+  refreshHomeScrollState: refreshLayout
 })
 
 const {
@@ -143,14 +145,13 @@ watch(isHome, async (home) => {
     return
   }
 
-  scrollToCurrentHomeSection()
   refreshLayout()
   await enterHomeIntro()
 }, { flush: 'post' })
 
 onMounted(async () => {
   if (isHome.value) {
-    scrollToCurrentHomeSection()
+    await restoreHomeAnchor()
     refreshLayout()
   }
 
