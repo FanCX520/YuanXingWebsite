@@ -131,6 +131,21 @@ export function useSiteRouteTransitions({
     }
   }
 
+  async function leaveHomeTo(href) {
+    if (routeLeaving.value) return
+
+    routeLeaving.value = true
+    await new Promise((resolve) => window.setTimeout(resolve, 180))
+
+    try {
+      await router.go(href)
+    } finally {
+      window.setTimeout(() => {
+        routeLeaving.value = false
+      }, 0)
+    }
+  }
+
   async function handleSectionNavigation(event, item) {
     if (
       event.button !== 0 ||
@@ -149,7 +164,12 @@ export function useSiteRouteTransitions({
       return
     }
 
-    if (!isHome.value) return
+    if (!isHome.value) {
+      event.preventDefault()
+      event.stopPropagation()
+      await leaveHomeTo(item.href)
+      return
+    }
 
     const target = document.getElementById(item.id)
     if (!target) return
@@ -182,18 +202,7 @@ export function useSiteRouteTransitions({
 
     event.preventDefault()
     event.stopPropagation()
-    if (routeLeaving.value) return
-
-    routeLeaving.value = true
-    await new Promise((resolve) => window.setTimeout(resolve, 180))
-
-    try {
-      await router.go(withBase('/'))
-    } finally {
-      window.setTimeout(() => {
-        routeLeaving.value = false
-      }, 0)
-    }
+    await leaveHomeTo(withBase('/'))
   }
 
   onMounted(() => {
