@@ -7,7 +7,7 @@
     "dev": "vitepress dev docs",
     "build": "vitepress build docs",
     "preview": "vitepress preview docs",
-    "pages:deploy": "npm run build && wrangler pages deploy dist --project-name=yuanxing-website"
+    "pages:deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "animejs": "^4.5.0",
