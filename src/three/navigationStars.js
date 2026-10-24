@@ -356,7 +356,7 @@ export function createNavigationStarField({ count = 3 } = {}) {
     if (changed) introAttribute.needsUpdate = true
   }
 
-  function setTransform(index, position, quaternion, scale, rotationZ) {
+  function setTransform(index, position, quaternion, scale, rotationZ, glowFactor = 6.5) {
     instanceMatrix.compose(position, quaternion, scale)
     stars.setMatrixAt(index, instanceMatrix)
 
@@ -370,7 +370,7 @@ export function createNavigationStarField({ count = 3 } = {}) {
     const glow = glows[index]
     glow.position.copy(position)
     glow.position.z -= 0.06
-    glow.scale.set(scale.x * 6.5 * introScale, scale.x * 6.5 * introScale, 1)
+    glow.scale.set(scale.x * glowFactor * introScale, scale.x * glowFactor * introScale, 1)
     glow.rotation.set(0, 0, rotationZ)
   }
 
@@ -419,6 +419,32 @@ export function createNavigationStarUpdater(field) {
   const scale = new THREE.Vector3()
   const euler = new THREE.Euler()
 
+  function resolveTarget(target) {
+    if (!target || typeof document === 'undefined') return target
+    if (typeof target.getBoundingClientRect === 'function') return target
+    if (!target.id) return target
+
+    const element = document.querySelector(
+      `[data-section-link="${String(target.id).replace(/"/g, '')}"]`
+    )
+    return element || target
+  }
+
+  // 三颗星收进任务栏后间距会小于散开状态。光晕继续用 6.5 倍会溢出毛玻璃并盖住文字。
+  function dockGlowFactor(points) {
+    if (points.length < 2) return 6.5
+
+    let minGap = Infinity
+    for (let i = 0; i < points.length; i += 1) {
+      for (let j = i + 1; j < points.length; j += 1) {
+        minGap = Math.min(minGap, Math.hypot(points[i].x - points[j].x, points[i].y - points[j].y))
+      }
+    }
+
+    if (minGap >= 320) return 6.5
+    return Math.max(2.05, 6.5 * (minGap / 320))
+  }
+
   return function updateNavigationStars({
     targets = [],
     bounds,
@@ -430,20 +456,23 @@ export function createNavigationStarUpdater(field) {
 
     const worldWidth = camera.right - camera.left
     const worldHeight = camera.top - camera.bottom
+    const placed = []
 
-    targets.slice(0, 3).forEach((target, index) => {
-      if (!target) return
+    targets.slice(0, 3).forEach((rawTarget, index) => {
+      if (!rawTarget) return
 
+      const target = resolveTarget(rawTarget)
       const variant = field.variants[index % field.variants.length]
-      const rect = typeof target.getBoundingClientRect === 'function'
+      const rect = typeof target?.getBoundingClientRect === 'function'
         ? target.getBoundingClientRect()
         : null
-      const x = rect
+      const usableRect = rect && rect.width > 0 && rect.height > 0
+      const x = usableRect
         ? rect.left + rect.width / 2 - bounds.left
-        : target.x * bounds.width
-      const y = rect
+        : (rawTarget.x ?? 0) * bounds.width
+      const y = usableRect
         ? rect.top + rect.height / 2 - bounds.top
-        : target.y * bounds.height
+        : (rawTarget.y ?? 0) * bounds.height
       const navBreath = reducedMotion
         ? 0
         : Math.sin(elapsed * NAVIGATION_BREATH_SPEED + variant.phase)
@@ -453,7 +482,7 @@ export function createNavigationStarUpdater(field) {
       const tiltX = reducedMotion ? 0 : variant.tiltX
       const tiltY = reducedMotion ? 0 : variant.tiltY
       const pixelSize = Math.max(
-        rect ? Math.min(rect.width, rect.height) : NAVIGATION_ICON_PIXEL_SIZE,
+        usableRect ? Math.min(rect.width, rect.height) : NAVIGATION_ICON_PIXEL_SIZE,
         28
       )
       const worldSize = (pixelSize / bounds.width) * worldWidth * 0.52
@@ -467,7 +496,27 @@ export function createNavigationStarUpdater(field) {
       euler.set(tiltX, tiltY, rotationZ)
       rotation.setFromEuler(euler)
       scale.setScalar(worldSize * variant.scale * scaleBreath)
-      field.setTransform(index, position, rotation, scale, euler.z)
+      placed.push({
+        index,
+        x,
+        y,
+        position: position.clone(),
+        quaternion: rotation.clone(),
+        scale: scale.clone(),
+        rotationZ: euler.z
+      })
+    })
+
+    const glowFactor = dockGlowFactor(placed)
+    placed.forEach((item) => {
+      field.setTransform(
+        item.index,
+        item.position,
+        item.quaternion,
+        item.scale,
+        item.rotationZ,
+        glowFactor
+      )
     })
 
     field.commit()

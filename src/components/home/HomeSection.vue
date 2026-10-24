@@ -65,6 +65,12 @@ const { target, ready, revealed } = useSectionReveal()
   transform: translateY(24px);
 }
 
+@media (max-width: 680px) {
+  .home-section:last-child {
+    padding-bottom: 156px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-section--ready {
     transition: none;

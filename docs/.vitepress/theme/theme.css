@@ -102,10 +102,10 @@ html.game-route-transitioning .game-article-body {
 .home-hero__scene {
   position: fixed !important;
   z-index: 0 !important;
-  inset: 0;
-  width: 100vw !important;
-  height: 100vh !important;
-  height: 100svh !important;
+  inset: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: none !important;
   max-height: none !important;
   margin: 0 !important;
   pointer-events: none;
@@ -295,13 +295,20 @@ html.game-route-transitioning .game-article-body {
 .page-content p.image-grid-3 > a {
   display: grid;
   min-width: 0;
+  height: 120px;
   place-items: center;
+  text-decoration: none;
+}
+
+.page-content p.image-grid-3 > a:hover,
+.page-content p.image-grid-3 > a:focus-visible {
+  text-decoration: none;
 }
 
 .page-content p.image-grid-3 > a > img {
   width: auto;
   max-width: min(100%, 180px);
-  max-height: 120px;
+  max-height: 100%;
   height: auto;
   margin: 0;
   border-radius: 6px;
@@ -355,8 +362,8 @@ html.game-route-transitioning .game-article-body {
     gap: 1.5rem;
   }
 
-  .page-content p.image-grid-3 > a > img {
-    max-height: 140px;
+  .page-content p.image-grid-3 > a {
+    height: 140px;
   }
 
   .page-content img.image-left,
