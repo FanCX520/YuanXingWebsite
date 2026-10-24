@@ -1,7 +1,8 @@
 <script setup>
+import { computed } from 'vue'
 import BrandWordmark from '../BrandWordmark.vue'
 
-defineProps({
+const props = defineProps({
   items: {
     type: Array,
     default: () => []
@@ -13,6 +14,10 @@ defineProps({
   brandReady: {
     type: Boolean,
     default: false
+  },
+  brandProgress: {
+    type: Number,
+    default: 1
   },
   brandStyle: {
     type: Object,
@@ -45,6 +50,14 @@ defineProps({
 })
 
 const emit = defineEmits(['brand-select', 'item-select'])
+
+const brandGlassStyle = computed(() => {
+  if (!props.home) return props.brandStyle
+
+  const reveal = Math.min(Math.max((props.brandProgress - 0.58) / 0.42, 0), 1)
+  const opacity = reveal * reveal * (3 - 2 * reveal)
+  return [props.brandStyle, { opacity }]
+})
 
 function getItemStyle(item) {
   return {
@@ -86,9 +99,9 @@ function getItemStyle(item) {
   </a>
 
   <div
-    v-if="!home || brandReady"
+    v-if="!home || brandProgress > 0.58"
     class="brand-glass"
-    :style="brandStyle"
+    :style="brandGlassStyle"
     aria-hidden="true"
   />
 

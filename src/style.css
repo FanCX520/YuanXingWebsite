@@ -37,6 +37,7 @@ body,
 body {
   min-height: 100vh;
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* 减少动态效果时直接呈现完整画面 */

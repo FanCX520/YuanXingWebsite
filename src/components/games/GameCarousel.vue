@@ -31,6 +31,18 @@ let resizeObserver = null
 let allowScrollSnap = false
 let isSnapping = false
 let isWheelAnimating = false
+let dragPointerId = null
+let dragOriginScroll = 0
+let dragStartX = 0
+let dragStartY = 0
+let dragLastX = 0
+let dragLastTime = 0
+let dragDelta = 0
+let dragVelocity = 0
+let dragAxis = null
+let flickDelta = 0
+let suppressClick = false
+let suppressTimer = 0
 
 const activeGame = computed(() => props.games[activeIndex.value] ?? null)
 
@@ -187,8 +199,29 @@ function snapToNearestCard() {
   updateCards()
 
   const viewport = viewportRef.value
+  const cardStep = getCardStep()
+  if (!viewport || !cardStep) return
+
+  const delta = flickDelta
+  const velocity = dragVelocity
+  flickDelta = 0
+  dragVelocity = 0
+
+  const fromIndex = clampIndex(Math.round(dragOriginScroll / cardStep))
+  const movedIndex = clampIndex(Math.round(viewport.scrollLeft / cardStep))
+  const threshold = Math.min(42, cardStep * 0.16)
+  const flung = Math.abs(velocity) > 0.45
+  const index = (Math.abs(delta) >= threshold || flung) && movedIndex === fromIndex
+    ? clampIndex(fromIndex + (delta < 0 ? 1 : -1))
+    : movedIndex
+
+  if (index !== activeIndex.value) {
+    activeIndex.value = index
+    rememberActiveGame(getGameCardKey(props.games[index]))
+  }
+
   const target = getCenteredScrollLeft(activeIndex.value)
-  if (!viewport || target === null) return
+  if (target === null) return
   if (Math.abs(target - viewport.scrollLeft) < 1) return
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -289,8 +322,90 @@ function handleWheel(event) {
 function handlePointerDown(event) {
   stopWheelAnimation()
   stopSnapAnimation()
-  if (event.pointerType === 'mouse') return
+  if (event.pointerType === 'mouse' || event.button !== 0) return
+
+  const viewport = viewportRef.value
+  if (!viewport) return
+
+  allowScrollSnap = false
+  dragPointerId = event.pointerId
+  dragOriginScroll = viewport.scrollLeft
+  dragStartX = event.clientX
+  dragStartY = event.clientY
+  dragLastX = event.clientX
+  dragLastTime = performance.now()
+  dragDelta = 0
+  dragVelocity = 0
+  dragAxis = null
+}
+
+function handlePointerMove(event) {
+  if (event.pointerId !== dragPointerId) return
+
+  const viewport = viewportRef.value
+  if (!viewport) return
+
+  const dx = event.clientX - dragStartX
+  const dy = event.clientY - dragStartY
+
+  if (!dragAxis) {
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return
+    dragAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
+    if (dragAxis === 'y') {
+      dragPointerId = null
+      return
+    }
+    viewport.setPointerCapture?.(event.pointerId)
+  }
+
+  if (dragAxis !== 'x') return
+  if (event.cancelable) event.preventDefault()
+
+  const now = performance.now()
+  const dt = now - dragLastTime
+  if (dt > 0 && dt < 80) dragVelocity = (event.clientX - dragLastX) / dt
+  dragLastX = event.clientX
+  dragLastTime = now
+  dragDelta = dx
+
+  const maxScroll = Math.max(viewport.scrollWidth - viewport.clientWidth, 0)
+  viewport.scrollLeft = Math.min(Math.max(dragOriginScroll - dx, 0), maxScroll)
+  scheduleCardUpdate()
+}
+
+function armClickSuppression() {
+  suppressClick = true
+  window.clearTimeout(suppressTimer)
+  suppressTimer = window.setTimeout(() => {
+    suppressClick = false
+  }, 400)
+}
+
+function handlePointerUp(event) {
+  if (event.pointerId !== dragPointerId) return
+
+  const axis = dragAxis
+  const delta = dragDelta
+  dragPointerId = null
+  dragAxis = null
+
+  if (axis !== 'x') return
+  flickDelta = delta
+  if (Math.abs(delta) > 8) armClickSuppression()
   allowScrollSnap = true
+  snapToNearestCard()
+}
+
+function handlePointerCancel(event) {
+  handlePointerUp(event)
+}
+
+function handleClickCapture(event) {
+  if (!suppressClick) return
+  suppressClick = false
+  window.clearTimeout(suppressTimer)
+  event.preventDefault()
+  event.stopPropagation()
 }
 
 function handleViewportScroll() {
@@ -342,11 +457,13 @@ function applyLayout({
     return false
   }
 
-  const sidePeek = Math.min(Math.max(viewport.clientWidth * 0.08, 28), 44)
-  const cardWidth = Math.min(
-    500,
-    Math.max(240, viewport.clientWidth - sidePeek * 2)
-  )
+  const compact = viewport.clientWidth <= 680
+  const sidePeek = compact
+    ? Math.min(Math.max(viewport.clientWidth * 0.14, 40), 78)
+    : Math.min(Math.max(viewport.clientWidth * 0.08, 28), 44)
+  const cardWidth = compact
+    ? Math.min(420, Math.max(200, viewport.clientWidth - sidePeek * 2))
+    : Math.min(500, Math.max(240, viewport.clientWidth - sidePeek * 2))
   track.style.setProperty('--carousel-card-width', `${cardWidth.toFixed(2)}px`)
 
   const firstCard = cardElements.get(0)
@@ -390,7 +507,11 @@ onMounted(async () => {
 
   viewport.addEventListener('scroll', handleViewportScroll, { passive: true })
   viewport.addEventListener('wheel', handleWheel, { passive: false })
-  viewport.addEventListener('pointerdown', handlePointerDown, { passive: true })
+  viewport.addEventListener('pointerdown', handlePointerDown)
+  viewport.addEventListener('pointermove', handlePointerMove, { passive: false })
+  viewport.addEventListener('pointerup', handlePointerUp)
+  viewport.addEventListener('pointercancel', handlePointerCancel)
+  viewport.addEventListener('click', handleClickCapture, true)
   viewport.addEventListener('scrollend', handleScrollEnd, { passive: true })
   resizeObserver = new ResizeObserver(updateLayout)
   resizeObserver.observe(viewport)
@@ -406,6 +527,10 @@ onBeforeUnmount(() => {
   viewportRef.value?.removeEventListener('scroll', handleViewportScroll)
   viewportRef.value?.removeEventListener('wheel', handleWheel)
   viewportRef.value?.removeEventListener('pointerdown', handlePointerDown)
+  viewportRef.value?.removeEventListener('pointermove', handlePointerMove)
+  viewportRef.value?.removeEventListener('pointerup', handlePointerUp)
+  viewportRef.value?.removeEventListener('pointercancel', handlePointerCancel)
+  viewportRef.value?.removeEventListener('click', handleClickCapture, true)
   viewportRef.value?.removeEventListener('scrollend', handleScrollEnd)
   resizeObserver?.disconnect()
   resizeObserver = null
@@ -413,6 +538,7 @@ onBeforeUnmount(() => {
   stopWheelAnimation()
   clearSnapTimer()
   window.clearTimeout(snapEndTimer)
+  window.clearTimeout(suppressTimer)
 
   if (updateFrame) {
     window.cancelAnimationFrame(updateFrame)
@@ -474,6 +600,7 @@ onBeforeUnmount(() => {
   overflow-y: hidden;
   padding-block: 30px 38px;
   overscroll-behavior-inline: contain;
+  touch-action: pan-y;
   scrollbar-width: none;
 }
 

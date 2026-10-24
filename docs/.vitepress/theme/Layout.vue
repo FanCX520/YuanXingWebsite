@@ -188,6 +188,7 @@ onMounted(async () => {
       :items="navigationTargets"
       :home="isHome"
       :brand-ready="brandReady"
+      :brand-progress="brandGeometry.progress"
       :brand-style="brandHomeStyle"
       :brand-href="withBase('/')"
       :brand-mark-src="withBase('/images/brand/logo-mark.png')"

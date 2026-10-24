@@ -11,30 +11,51 @@ export function useHomeScrollState({ isHome }) {
   const logoReplacementProgress = ref(0)
   const activeSection = ref('')
   let scrollFrame = 0
+  let heroSpan = 0
+  let measuredWidth = 0
 
-  function updateViewport() {
-    viewport.value = {
-      width: window.innerWidth,
+  function readViewportSize() {
+    return {
+      width: document.documentElement.clientWidth || window.innerWidth,
       height: window.innerHeight
     }
+  }
+
+  function updateViewport() {
+    const live = readViewportSize()
+    const widthChanged = Math.abs(live.width - measuredWidth) > 2
+    // 手机浏览器收起地址栏时 innerHeight 会跳，收缩中的星标就会顿一下。
+    // 宽度不变时沿用上一次高度，只在旋转或首次测量时更新。
+    const compact = live.width <= 680
+    const height = compact && measuredWidth && !widthChanged
+      ? viewport.value.height
+      : live.height
+
+    measuredWidth = live.width
+    if (widthChanged) {
+      const hero = document.querySelector('.home-hero')
+      heroSpan = hero?.offsetHeight || height
+    }
+
+    if (viewport.value.width === live.width && viewport.value.height === height) return
+    viewport.value = { width: live.width, height }
   }
 
   function calculateLogoReplacementProgress() {
     if (!isHome.value) return 0
 
-    const settleAt = window.innerHeight * 0.62
-    const hero = document.querySelector('.home-hero')
-    const sectionTop = hero
-      ? hero.getBoundingClientRect().bottom + window.scrollY
-      : window.innerHeight
-    const range = Math.max(sectionTop - settleAt, 1)
+    const height = viewport.value.height || window.innerHeight
+    const settleAt = height * 0.62
+    const span = heroSpan || height
+    const range = Math.max(span - settleAt, 1)
 
     return Math.min(Math.max((window.scrollY - settleAt) / range, 0), 1)
   }
 
   function updateScrollProgress() {
+    const height = viewport.value.height || window.innerHeight
     scrollProgress.value = Math.min(
-      Math.max(window.scrollY / Math.max(window.innerHeight * 0.62, 1), 0),
+      Math.max(window.scrollY / Math.max(height * 0.62, 1), 0),
       1
     )
     logoReplacementProgress.value = calculateLogoReplacementProgress()

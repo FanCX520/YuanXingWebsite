@@ -25,7 +25,9 @@ function getBrandLayout(viewport) {
 
 function getHeroAnchorStyle(viewport, layout, progress) {
   const startSize = Math.min(viewport.width * 0.68, 620, viewport.height * 0.72)
-  const size = lerp(startSize, layout.logoSize, progress)
+  // 角标里的静态标志有 1.24 倍缩放。终点用同一尺寸，避免心形收进矩形时突然变大。
+  const endSize = layout.logoSize * 1.24
+  const size = lerp(startSize, endSize, progress)
 
   return {
     width: `${size}px`,

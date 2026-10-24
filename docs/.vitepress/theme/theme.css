@@ -132,7 +132,7 @@ html.game-route-transitioning .game-article-body {
   z-index: 3;
   object-fit: contain;
   pointer-events: none;
-  transform: translate(-50%, -50%) scale(1.24);
+  transform: translate(-50%, -50%);
   transform-origin: center;
   user-select: none;
 }
